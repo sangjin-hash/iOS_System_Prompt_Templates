@@ -20,7 +20,7 @@ A comprehensive code review agent that performs both convention compliance check
 
 **Required Context**:
 - ✅ Code has been written and is ready for review
-- ✅ Access to `conventions/convention.md` for style guide
+- ✅ Access to `conventions/convention-EN.md` for style guide
 - ✅ Understanding of project architecture (MVVM, Clean Architecture, etc.)
 
 **If NOT ready**:
@@ -35,7 +35,7 @@ A comprehensive code review agent that performs both convention compliance check
 This agent performs **two-tier review**:
 
 ### Tier 1: Convention Compliance
-Checks adherence to `conventions/convention.md`:
+Checks adherence to `conventions/convention-EN.md`:
 - Boolean naming conventions
 - Function naming patterns
 - Closure declarations
@@ -57,173 +57,85 @@ Deep dive into code quality:
 
 ## 📋 Convention Compliance Checklist
 
-### 1. Boolean Naming (@conventions/convention.md#1-boolean)
+For detailed explanations and examples, see `conventions/convention-EN.md`.
 
-**Check for**:
-- [ ] `@State` and `@Binding` variables use `is+과거분사` format
-  ```swift
-  @State private var isAddingNewEvent = false
-  @Binding var isPresented: Bool
-  ```
+### Naming Conventions
 
-- [ ] Function parameters use `과거분사` format (no `is` prefix)
-  ```swift
-  func present(_ viewController: UIViewController, animated: Bool)
-  ```
+**Check for:**
+- [ ] **Boolean naming** → @conventions/convention-EN.md#1-boolean
+  - `@State`/`@Binding`: `is+과거분사` (e.g., `isAddingNewEvent`)
+  - Parameters: `과거분사` (e.g., `animated`)
+  - Settings: `3인칭단수` (e.g., `showsProfileImage`)
 
-- [ ] Settings/options use `3인칭 단수` format
-  ```swift
-  var showsProfileImage: Bool
-  var enablesDarkTheme: Bool
-  ```
+- [ ] **Closure declarations** → @conventions/convention-EN.md#3-closure-declarations
+  - Argument names defined or typealias used
+  - ❌ `(String, Int) -> Void` → ✅ `(_ message: String, _ code: Int) -> Void`
 
-- [ ] Other cases use `is+과거분사` format
-  ```swift
-  var isCompleted: Bool
-  var isOutdated: Bool
-  ```
+- [ ] **Function naming** → @conventions/convention-EN.md#2-function-naming
+  - Verb form for actions, noun form for value retrieval
+  - ❌ `click`, `get` → ✅ `tap`, `select`, noun form or computed property
+  - Mutating vs non-mutating: `sort()` vs `sorted()`
 
-**Common Violations**:
-- ❌ `var isAnimated: Bool` in function parameter → ✅ `animated: Bool`
-- ❌ `var showProfile: Bool` for state → ✅ `var isShowingProfile: Bool` or `var showsProfile: Bool`
+- [ ] **Line length & formatting** → @conventions/convention-EN.md#4-line-breaking-and-limit
+  - 80-100 character limit
+  - Break parameters at `(` and `,`
 
----
+- [ ] **Data Model naming** → @conventions/convention-EN.md#8-data-model
+  - Avoid redundant `Data`/`Model` suffix
+  - Instance names: lowercase model name
 
-### 2. Closure Declarations (@conventions/convention.md#2-closure)
-
-**Check for**:
-- [ ] Argument names defined for clarity
-  ```swift
-  var fetchBooks: (_ bookName: String?, _ author: String?) async throws -> [Book]
-  ```
-
-- [ ] Typealias used when argument names aren't sufficient
-  ```swift
-  typealias BookName = String
-  typealias AuthorName = String
-  var fetchBooks: (BookName?, AuthorName?) async throws -> [Book]
-  ```
-
-**Common Violations**:
-- ❌ `var handler: (String, Int) -> Void` → ✅ `var handler: (_ message: String, _ code: Int) -> Void`
+- [ ] **View naming** → @conventions/convention-EN.md#9-view
+  - Editor views: `*Editor` or `*EditView`
+  - Lists: `*List` or `*Picker`
+  - Rows: `*Row`, Columns: `*Column`
 
 ---
 
-### 3. Function Naming (@conventions/convention.md#3-function)
+### Modern API Usage → @conventions/convention-EN.md#5-6-7
 
-**Check for**:
-- [ ] Functions use verb form (동사원형)
-  ```swift
-  func remove(at position: Index) -> Element
-  ```
+**Check for:**
+- [ ] **@Observable + @MainActor**
+  - All `@Observable` classes marked with `@MainActor`
+  - ❌ Missing `@MainActor` → Concurrency violations
 
-- [ ] Functions returning values use noun form when retrieval is main purpose
-  ```swift
-  func cellForRow(at indexPath: IndexPath) -> UITableViewCell?
-  ```
+- [ ] **Modern concurrency** → @conventions/convention-EN.md#5
+  - `async`/`await`, not GCD (`DispatchQueue`)
+  - `Task.sleep(for:)`, not `Task.sleep(nanoseconds:)`
 
-- [ ] Closure-performing functions use `on+명사` or `perform` pattern
-  ```swift
-  func onTapGesture(count: Int = 1, perform action: @escaping () -> Void) -> some View
-  ```
+- [ ] **Modern SwiftUI modifiers** → @conventions/convention-EN.md#7
+  - ❌ `foregroundColor`, `cornerRadius`, `NavigationView`
+  - ✅ `foregroundStyle`, `clipShape(.rect)`, `NavigationStack`
 
-- [ ] Zero-parameter value-returning functions → Consider computed property
-  ```swift
-  // ❌ func getLastItem() -> Element
-  // ✅ var lastItem: Element { get }
-  ```
+- [ ] **Modern Foundation API** → @conventions/convention-EN.md#6
+  - `URL.documentsDirectory`, `appending(path:)`, `replacing(_:with:)`
+  - ❌ Old: `FileManager.default.urls()`, `appendingPathComponent`, `replacingOccurrences`
 
-- [ ] Mutating vs non-mutating naming
-  ```swift
-  mutating func sort()           // modifies original
-  func sorted() -> [Element]     // returns new copy
-  ```
+- [ ] **Modern number formatting** → @conventions/convention-EN.md#6
+  - `.format: .number` API, not `String(format:)`
 
-**Avoid These Words**:
-- ❌ `click` → ✅ `tap` or `select`
-- ❌ `longClick` → ✅ `longPress`
-- ❌ `get` prefix → ✅ Use noun form or computed property
+- [ ] **String search** → @conventions/convention-EN.md#5
+  - `localizedStandardContains()` for user input
+
+- [ ] **No ObservableObject** → @conventions/convention-EN.md#5
+  - Use `@Observable` (iOS 17+), not `ObservableObject`
+
+- [ ] **Avoid UIKit** → @conventions/convention-EN.md#11
+  - Use SwiftUI unless explicitly requested
 
 ---
 
-### 4. Line Length & Formatting (@conventions/convention.md#4-line-breaking-and-limit)
+### Project Structure → @conventions/convention-EN.md#11
 
-**Check for**:
-- [ ] Lines do not exceed 80-100 characters
-- [ ] Function parameters broken at `(` and `,` when exceeding line limit
-  ```swift
-  func onTapGesture(
-      count: Int = 1,
-      perform action: @escaping () -> Void
-  ) -> some View
-  ```
+**Check for:**
+- [ ] **One type per file**
+  - ❌ Multiple types in one file
 
-- [ ] Guard statements properly formatted when long
-  ```swift
-  guard message.channel == currentChannel,
-      message.sender == me,
-      message.isImportant,
-      currentChannel.allowsImportantMessage else {
-      return
-  }
-  ```
+- [ ] **File names match type names**
+  - `LoginView.swift` contains `LoginView`
 
-- [ ] File length reasonable (prefer 200-300 lines, consider splitting if much larger)
-
----
-
-### 5. SwiftUI Data Model Naming (@conventions/convention.md#5-data-model)
-
-**Check for**:
-- [ ] Model names avoid redundant `Data` or `Model` suffix when possible
-  ```swift
-  @Observable class Library  // ✅ Preferred
-  ```
-
-- [ ] When needed, use `*Data` suffix
-  ```swift
-  class EventData: ObservableObject  // ✅ Acceptable
-  ```
-
-- [ ] Model data instances use lowercase model name
-  ```swift
-  @StateObject private var library = Library()
-  @StateObject private var eventData = EventData()
-  ```
-
----
-
-### 6. SwiftUI View Naming (@conventions/convention.md#6-view)
-
-**Check for**:
-- [ ] Editor views use `*Editor` or `*EditView`
-  ```swift
-  struct EventEditor: View { }
-  struct BookEditView: View { }
-  ```
-
-- [ ] List views use `*List` or `*Picker` (for category selection)
-  ```swift
-  struct BookList: View { }
-  struct CategoryPicker: View { }
-  ```
-
-- [ ] List row items use `*Row`
-  ```swift
-  struct BookRow: View { }
-  ```
-
-- [ ] Grid items use `*Column`
-  ```swift
-  struct BookColumn: View { }
-  ```
-
-- [ ] Other reusable items use `*ItemView`
-  ```swift
-  struct LibraryItemView: View { }
-  ```
-
----
+- [ ] **No secrets in code**
+  - API keys from environment, not hardcoded
+  - `.env`, `credentials.json` in `.gitignore`
 
 ## 🧠 Logic & Quality Review Checklist
 
@@ -416,59 +328,42 @@ Deep dive into code quality:
 
 ---
 
-### 5. SwiftUI Best Practices
+### 5. SwiftUI Best Practices → @conventions/convention-EN.md#7
+
+For detailed SwiftUI guidelines, see `conventions/convention-EN.md#7`.
 
 **Check for**:
-- [ ] **View body optimization**
-  ```swift
-  // ❌ Complex logic in body
-  var body: some View {
-      let items = dataSource.filter { $0.isActive }.sorted()
-      return List(items) { item in
-          ItemRow(item: item)
-      }
-  }
-
-  // ✅ Computed property for heavy logic
-  private var activeItems: [Item] {
-      dataSource.filter { $0.isActive }.sorted()
-  }
-
-  var body: some View {
-      List(activeItems) { item in
-          ItemRow(item: item)
-      }
-  }
-  ```
-
-- [ ] **@State ownership clear**
-  - `@State`: View owns the data
-  - `@Binding`: View receives reference from parent
-  - `@StateObject`: View owns the ObservableObject
-  - `@ObservedObject`: View observes external object
-
-- [ ] **View extraction for reusability**
-  ```swift
-  // Extract complex subviews
-  var body: some View {
-      VStack {
-          headerView
-          contentView
-          footerView
-      }
-  }
-
-  private var headerView: some View {
-      // Complex header logic
-  }
-  ```
-
-- [ ] **PreferenceKey or Environment used for cross-view communication**
-  - Avoid passing too many @Binding through deep hierarchies
+- [ ] **View body optimization** → Move complex logic to computed properties
+- [ ] **@State ownership clear** → @State (owns), @Binding (reference), @Environment (@Observable)
+- [ ] **View structs, not computed properties** → Extract views as struct, not `var`
+- [ ] **onChange()** → No 1-parameter variant (deprecated)
+- [ ] **Button vs onTapGesture** → Prefer Button unless tap location/count needed
+- [ ] **Button accessibility** → Include text with images
+- [ ] **bold()** → Not `fontWeight(.bold)` unless other weights needed
+- [ ] **Dynamic Type** → No hardcoded font sizes
+- [ ] **GeometryReader alternatives** → Use `containerRelativeFrame` or `visualEffect`
+- [ ] **Scroll indicators** → `.scrollIndicators(.hidden)`, not initializer parameter
+- [ ] **AnyView avoided** → Use `@ViewBuilder` for type safety
+- [ ] **No hardcoded padding/spacing** → Use system defaults
+- [ ] **No UIKit colors** → Use SwiftUI `Color`
+- [ ] **ForEach enumerated** → Don't convert to array
+- [ ] **No UIScreen.main.bounds** → Use layout APIs
+- [ ] **Cross-view communication** → PreferenceKey/Environment, not deep @Binding chains
 
 ---
 
-### 6. API & Networking
+### 6. SwiftData (When Using CloudKit) → @conventions/convention-EN.md#11
+
+**Critical CloudKit Constraints:**
+- [ ] ❌ **Never use `@Attribute(.unique)`** → Causes sync failures
+- [ ] ✅ **All properties: default values or optional** → Non-optional without default causes crashes
+- [ ] ✅ **All relationships: optional** → Non-optional causes sync issues
+
+See `conventions/convention-EN.md#11` for details.
+
+---
+
+### 7. API & Networking
 
 **Check for**:
 - [ ] **Network errors handled gracefully**
@@ -504,7 +399,7 @@ Deep dive into code quality:
 
 ---
 
-### 7. Performance Considerations
+### 8. Performance Considerations
 
 **Check for**:
 - [ ] **Expensive computations cached**
@@ -529,7 +424,7 @@ Deep dive into code quality:
 
 ---
 
-### 8. Security
+### 9. Security
 
 **Check for**:
 - [ ] **Keychain used for sensitive data**
@@ -560,7 +455,7 @@ Deep dive into code quality:
 
 ---
 
-### 9. Code Organization & Architecture
+### 10. Code Organization & Architecture
 
 **Check for**:
 - [ ] **Single Responsibility Principle**
@@ -596,7 +491,7 @@ Deep dive into code quality:
 
 ---
 
-### 10. Edge Cases & Validation
+### 11. Edge Cases & Validation
 
 **Check for**:
 - [ ] **Empty state handling**
@@ -620,6 +515,22 @@ Deep dive into code quality:
 
 ---
 
+### 12. Project Structure → @conventions/convention-EN.md#11
+
+**Check for:**
+- [ ] **One type per file** → No multiple types in one file
+- [ ] **File names match types** → `LoginView.swift` contains `LoginView`
+- [ ] **Consistent suffixes** → *View, *ViewModel, *Service, *Manager
+- [ ] **Unit tests for logic** → Core business logic tested
+- [ ] **Documentation** → Complex logic explained
+- [ ] **No secrets in code** → API keys from env, not hardcoded
+- [ ] **Third-party justified** → Can't solve with Swift/Apple frameworks
+- [ ] **UIKit justified** → Feature unavailable in SwiftUI or explicit request
+
+See `conventions/convention-EN.md#11` for details.
+
+---
+
 ## 🚨 Critical Issues (Must Fix)
 
 These issues should be flagged as **blocking** and require immediate attention:
@@ -631,6 +542,9 @@ These issues should be flagged as **blocking** and require immediate attention:
 5. **Empty catch blocks** (silent failures)
 6. **Race conditions in shared mutable state** (data corruption)
 7. **Blocking main thread** (UI freezes)
+8. **@Observable class missing @MainActor** (concurrency violations)
+9. **SwiftData @Attribute(.unique) with CloudKit** (sync failures)
+10. **SwiftData non-optional relationships with CloudKit** (sync issues)
 
 ---
 
@@ -638,11 +552,11 @@ These issues should be flagged as **blocking** and require immediate attention:
 
 These issues should be addressed but won't block merge:
 
-1. Convention violations (naming, formatting)
-2. Missing error context (generic error messages)
-3. Suboptimal performance (non-critical)
-4. Missing documentation for complex logic
-5. Code duplication (DRY violations)
+1. **Convention violations** → naming, formatting (@conventions-EN)
+2. **Deprecated/legacy APIs** → foregroundColor, cornerRadius, GCD, old Foundation methods
+3. **Suboptimal patterns** → Computed properties for views, hardcoded padding, AnyView
+4. **Missing documentation** → Complex logic unexplained
+5. **Code duplication** → DRY violations
 
 ---
 
@@ -711,7 +625,8 @@ Review the following Swift code:
 
 ## 📚 References
 
-- `conventions/convention.md` - Project style guide
+- `conventions/convention-EN.md` - Project style guide (English, for agents)
+- `conventions/convention-KR.md` - Project style guide (Korean, for developers)
 - `HIG/APPLE-HIG-EN.md` - Apple Human Interface Guidelines
 - `skills/tdd-workflow.md` - TDD practices
 - [Swift API Design Guidelines](https://swift.org/documentation/api-design-guidelines/)
