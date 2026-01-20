@@ -1,0 +1,38 @@
+// {FeatureName}Feature.swift
+import Foundation
+import ComposableArchitecture
+
+@Reducer
+struct {FeatureName}Feature {
+
+    // MARK: - State
+
+    @ObservableState
+    struct State: Equatable {
+        // {StateProperties}
+        var isLoading = false
+    }
+
+    // MARK: - Action
+
+    enum Action: Equatable {
+        case onAppear
+        // {ViewActions} - User interactions
+        // {InternalActions} - Async responses (Result<T, Error>)
+    }
+
+    // MARK: - Dependency
+
+    // @Dependency(\.{clientName}) var {clientName}
+
+    // MARK: - Reducer
+
+    var body: some Reducer<State, Action> {
+        Reduce { state, action in
+            switch action {
+            case .onAppear:
+                return .none
+            }
+        }
+    }
+}

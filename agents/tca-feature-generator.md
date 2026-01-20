@@ -17,14 +17,20 @@ Generates TCA Feature boilerplate code following project conventions. Creates co
 ## Prerequisites
 
 **Required Context**:
-- Feature name (e.g., Home, ChatList, ChatRoom)
+- Feature name
 - Feature's main responsibilities
 - Required State properties
 - Main Actions
 
-**References**:
-- `@.claude/docs/draft.md` - Project structure and folder locations
-- `@conventions/convention-EN.md` - Coding conventions
+**References** (MUST read before generating code):
+`@conventions/convention-EN.md` - Coding conventions
+
+**Templates** (MUST read before generating code):
+- `@.claude/templates/TCA-Feature.swift.template` - Feature Reducer template
+- `@.claude/templates/TCA-View.swift.template` - SwiftUI View template
+- `@.claude/templates/TCA-Dependency.swift.template` - Dependency Client template
+
+> **IMPORTANT**: Always read and follow the templates in `.claude/templates/` directory when generating TCA code. These templates reflect the project's actual conventions and patterns.
 
 ---
 
@@ -33,91 +39,9 @@ Generates TCA Feature boilerplate code following project conventions. Creates co
 ### File Organization
 
 ```
-Presentation/Feature/{FeatureName}/
+Feature/{FeatureName}/
 ├── {FeatureName}Feature.swift    # Reducer (State, Action, body)
 └── {FeatureName}View.swift       # SwiftUI View
-```
-
----
-
-## Feature Template
-
-### 1. {FeatureName}Feature.swift
-
-```swift
-import ComposableArchitecture
-import Foundation
-
-@Reducer
-struct {FeatureName}Feature {
-    // MARK: - State
-    @ObservableState
-    struct State: Equatable {
-        // TODO: Add state properties
-        var isLoading = false
-    }
-
-    // MARK: - Action
-    enum Action: Equatable {
-        // View Actions
-        case onAppear
-        case onDisappear
-
-        // Internal Actions
-        case _setLoading(Bool)
-
-        // Delegate Actions (for parent communication)
-        // case delegate(Delegate)
-        // enum Delegate: Equatable { }
-    }
-
-    // MARK: - Dependencies
-    @Dependency(\.dismiss) var dismiss
-
-    // MARK: - Body
-    var body: some ReducerOf<Self> {
-        Reduce { state, action in
-            switch action {
-            case .onAppear:
-                return .none
-
-            case .onDisappear:
-                return .none
-
-            case ._setLoading(let isLoading):
-                state.isLoading = isLoading
-                return .none
-            }
-        }
-    }
-}
-```
-
-### 2. {FeatureName}View.swift
-
-```swift
-import ComposableArchitecture
-import SwiftUI
-
-struct {FeatureName}View: View {
-    @Bindable var store: StoreOf<{FeatureName}Feature>
-
-    var body: some View {
-        // TODO: Implement view
-        Text("{FeatureName}")
-            .onAppear { store.send(.onAppear) }
-            .onDisappear { store.send(.onDisappear) }
-    }
-}
-
-// MARK: - Preview
-#Preview {
-    {FeatureName}View(
-        store: Store(initialState: {FeatureName}Feature.State()) {
-            {FeatureName}Feature()
-        }
-    )
-}
 ```
 
 ---
@@ -288,56 +212,6 @@ struct DataFeature {
 
 ---
 
-## Dependency Registration Pattern
-
-### Core/Dependencies/{Client}Client.swift
-
-```swift
-import ComposableArchitecture
-import Foundation
-
-struct ItemClient {
-    var fetchAll: @Sendable () async throws -> [Item]
-    var fetch: @Sendable (String) async throws -> Item
-    var create: @Sendable (Item) async throws -> Item
-    var delete: @Sendable (String) async throws -> Void
-}
-
-extension ItemClient: DependencyKey {
-    static let liveValue = ItemClient(
-        fetchAll: {
-            // Actual implementation
-            try await FirestoreService.shared.fetchItems()
-        },
-        fetch: { id in
-            try await FirestoreService.shared.fetchItem(id: id)
-        },
-        create: { item in
-            try await FirestoreService.shared.createItem(item)
-        },
-        delete: { id in
-            try await FirestoreService.shared.deleteItem(id: id)
-        }
-    )
-
-    static let testValue = ItemClient(
-        fetchAll: { [] },
-        fetch: { _ in Item.mock },
-        create: { $0 },
-        delete: { _ in }
-    )
-}
-
-extension DependencyValues {
-    var itemClient: ItemClient {
-        get { self[ItemClient.self] }
-        set { self[ItemClient.self] = newValue }
-    }
-}
-```
-
----
-
 ## Binding Pattern
 
 ### Two-way Binding with TCA
@@ -462,22 +336,6 @@ struct AlertView: View {
 
 ---
 
-## Project Feature List
-
-Features to generate for this project:
-
-| Feature | Location | Description |
-|---------|----------|-------------|
-| AppFeature | Presentation/Feature/App/ | Root Feature, auth state management |
-| AuthFeature | Presentation/Feature/Auth/ | Login screen |
-| MainTabFeature | Presentation/Feature/MainTab/ | Tab bar container |
-| HomeFeature | Presentation/Feature/Home/ | Friend list screen |
-| SearchFeature | Presentation/Feature/Search/ | User search screen |
-| ChatListFeature | Presentation/Feature/ChatList/ | Chat room list screen |
-| ChatRoomFeature | Presentation/Feature/ChatRoom/ | Chat room screen |
-
----
-
 ## Output Format
 
 When generating a Feature, output in this format:
@@ -486,8 +344,8 @@ When generating a Feature, output in this format:
 ## Generated: {FeatureName}Feature
 
 ### Files Created
-1. `Presentation/Feature/{FeatureName}/{FeatureName}Feature.swift`
-2. `Presentation/Feature/{FeatureName}/{FeatureName}View.swift`
+1. `{FeatureName}Feature.swift`
+2. `{FeatureName}View.swift`
 
 ### State Properties
 - `property1: Type` - Description
@@ -511,5 +369,3 @@ When generating a Feature, output in this format:
 ## References
 
 - [TCA Documentation](https://pointfreeco.github.io/swift-composable-architecture/main/documentation/composablearchitecture/)
-- `@.claude/docs/draft.md` - Project structure
-- `@conventions/convention-EN.md` - Coding conventions

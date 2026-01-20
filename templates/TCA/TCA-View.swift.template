@@ -1,0 +1,23 @@
+// {FeatureName}View.swift
+import SwiftUI
+import ComposableArchitecture
+
+struct {FeatureName}View: View {
+    // Read-only: let store: StoreOf<{FeatureName}Feature>
+    // For binding: @Bindable var store: StoreOf<{FeatureName}Feature>
+    let store: StoreOf<{FeatureName}Feature>
+
+    var body: some View {
+        // TODO: Implement view
+        Text("{FeatureName}")
+            .onAppear { store.send(.onAppear) }
+    }
+}
+
+#Preview {
+    {FeatureName}View(
+        store: Store(initialState: {FeatureName}Feature.State()) {
+            {FeatureName}Feature()
+        }
+    )
+}

@@ -1,0 +1,45 @@
+// {ClientName}.swift
+import Foundation
+import ComposableArchitecture
+
+// MARK: - {ErrorName} Error
+
+enum {ErrorName}: Error, Equatable {
+    // case errorCase
+}
+
+// MARK: - {ClientName}
+
+@DependencyClient
+struct {ClientName}: Sendable {
+    // var methodName: @Sendable () async throws -> ReturnType
+}
+
+// MARK: - Dependency Key
+
+extension {ClientName}: DependencyKey {
+    static let liveValue = {ClientName}(
+        // methodName: { /* Live implementation */ }
+    )
+}
+
+// MARK: - Dependency Values
+
+extension DependencyValues {
+    var {clientPropertyName}: {ClientName} {
+        get { self[{ClientName}.self] }
+        set { self[{ClientName}.self] = newValue }
+    }
+}
+
+// MARK: - Mock Helper
+
+extension {ClientName} {
+    static func mock(
+        // methodName: @escaping @Sendable () async throws -> ReturnType = { /* Default value */ }
+    ) -> Self {
+        {ClientName}(
+            // methodName: methodName
+        )
+    }
+}

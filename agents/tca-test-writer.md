@@ -22,14 +22,17 @@ Generates test code for TCA Features following Test-Driven Development (TDD) met
 - Feature's State, Action, and Dependencies
 - Expected behavior to test
 
-**References**:
-- `@.claude/skills/tdd-workflow.md` - TDD workflow guide (Red-Green-Refactor)
-- `@.claude/agents/tca-feature-generator.md` - TCA Feature structure
-- `@conventions/convention-EN.md` - Coding conventions
+**References** (MUST read before generating code):
+`@.claude/skills/tdd-workflow.md` - TDD workflow guide (Red-Green-Refactor)
+
+**Templates** (MUST read before generating code):
+- `@.claude/templates/TCA/TCA-FeatureTests.swift.template` - Test file template
+
+> **IMPORTANT**: Always read and follow the templates in `.claude/templates/` directory when generating test code. These templates reflect the project's actual conventions and patterns.
 
 ---
 
-## TDD Cycle for TCA (from tdd-workflow.md)
+## TDD Cycle for TCA
 
 ### Overview
 Follow the 3-step cycle for each test case:
@@ -55,10 +58,11 @@ Follow the 3-step cycle for each test case:
 
 ```swift
 import ComposableArchitecture
-import XCTest
+import Testing
 
 @MainActor
-final class FeatureTests: XCTestCase {
+struct FeatureTests {
+    @Test
     func testExample() async {
         let store = TestStore(initialState: Feature.State()) {
             Feature()
@@ -83,71 +87,12 @@ final class FeatureTests: XCTestCase {
 
 ---
 
-## Test File Structure
-
-### File Location
-```
-ChattingExampleTests/
-├── Feature/
-│   ├── HomeFeatureTests.swift
-│   ├── ChatListFeatureTests.swift
-│   └── ChatRoomFeatureTests.swift
-├── Mocks/
-│   ├── MockFirestoreClient.swift
-│   ├── MockKeychainClient.swift
-│   └── MockSwiftDataClient.swift
-└── Helpers/
-    └── TestHelpers.swift
-```
-
-### Test Class Template
-
-```swift
-import ComposableArchitecture
-import XCTest
-
-@testable import ChattingExample
-
-@MainActor
-final class {FeatureName}FeatureTests: XCTestCase {
-
-    // MARK: - Properties
-
-    // MARK: - Setup & Teardown
-
-    override func setUp() async throws {
-        try await super.setUp()
-    }
-
-    override func tearDown() async throws {
-        try await super.tearDown()
-    }
-
-    // MARK: - State Tests
-
-    func test_initialState_isCorrect() async {
-        let state = {FeatureName}Feature.State()
-
-        XCTAssertFalse(state.isLoading)
-        XCTAssertTrue(state.items.isEmpty)
-        XCTAssertNil(state.errorMessage)
-    }
-
-    // MARK: - Action Tests
-
-    // MARK: - Effect Tests
-
-    // MARK: - Integration Tests
-}
-```
-
----
-
 ## Test Patterns
 
 ### 1. Simple State Change Test
 
 ```swift
+@Test @MainActor
 func test_setLoading_updatesState() async {
     let store = TestStore(initialState: Feature.State()) {
         Feature()
@@ -166,6 +111,7 @@ func test_setLoading_updatesState() async {
 ### 2. Async Effect Test
 
 ```swift
+@Test @MainActor
 func test_fetchItems_success() async {
     let mockItems = [Item(id: "1", name: "Test")]
 
@@ -189,6 +135,7 @@ func test_fetchItems_success() async {
 ### 3. Async Effect Error Test
 
 ```swift
+@Test @MainActor
 func test_fetchItems_failure() async {
     struct TestError: Error, Equatable {}
 
@@ -212,6 +159,7 @@ func test_fetchItems_failure() async {
 ### 4. Navigation Test
 
 ```swift
+@Test @MainActor
 func test_itemTapped_pushesDetail() async {
     let item = Item(id: "1", name: "Test")
 
@@ -230,6 +178,7 @@ func test_itemTapped_pushesDetail() async {
 ### 5. Binding Test
 
 ```swift
+@Test @MainActor
 func test_binding_textChanged() async {
     let store = TestStore(initialState: FormFeature.State()) {
         FormFeature()
@@ -244,6 +193,7 @@ func test_binding_textChanged() async {
 ### 6. Alert/Sheet Presentation Test
 
 ```swift
+@Test @MainActor
 func test_showAlert_presentsAlert() async {
     let store = TestStore(initialState: Feature.State()) {
         Feature()
@@ -263,6 +213,7 @@ func test_showAlert_presentsAlert() async {
     }
 }
 
+@Test @MainActor
 func test_alertConfirmed_deletesItem() async {
     let store = TestStore(
         initialState: Feature.State(
@@ -285,6 +236,7 @@ func test_alertConfirmed_deletesItem() async {
 ### 7. Timer/Long-Running Effect Test
 
 ```swift
+@Test @MainActor
 func test_startTimer_emitsTicksAndStops() async {
     let clock = TestClock()
 
@@ -317,6 +269,7 @@ func test_startTimer_emitsTicksAndStops() async {
 ### 8. Child Feature Integration Test
 
 ```swift
+@Test @MainActor
 func test_childDelegate_updatesParent() async {
     let store = TestStore(
         initialState: ParentFeature.State(
@@ -336,23 +289,10 @@ func test_childDelegate_updatesParent() async {
 
 ## Dependency Mocking
 
-### Mock Client Template
+### Mock Client Pattern
 
 ```swift
-// Mocks/MockItemClient.swift
-import ComposableArchitecture
-import Foundation
-
-@testable import ChattingExample
-
 extension ItemClient {
-    static let testValue = ItemClient(
-        fetchAll: { [] },
-        fetch: { _ in Item.mock },
-        create: { $0 },
-        delete: { _ in }
-    )
-
     static func mock(
         fetchAll: @escaping @Sendable () async throws -> [Item] = { [] },
         fetch: @escaping @Sendable (String) async throws -> Item = { _ in Item.mock },
@@ -372,6 +312,7 @@ extension ItemClient {
 ### Using Mock in Tests
 
 ```swift
+@Test @MainActor
 func test_withCustomMock() async {
     let store = TestStore(initialState: Feature.State()) {
         Feature()
@@ -385,18 +326,9 @@ func test_withCustomMock() async {
 }
 ```
 
-### Project-Specific Mock Clients
-
-| Client | Mock Behavior |
-|--------|---------------|
-| `FirestoreClient` | Return mock data, simulate errors |
-| `KeychainClient` | In-memory storage |
-| `SwiftDataClient` | In-memory database |
-| `StorageClient` | Return mock URLs |
-
 ---
 
-## TDD Quality Gates (from tdd-workflow.md)
+## TDD Quality Gates
 
 ### RED Phase Checklist
 - [ ] Test clearly describes expected behavior
@@ -496,16 +428,16 @@ When generating tests, output in this format:
 ## Generated Tests: {FeatureName}Feature
 
 ### Test File
-`ChattingExampleTests/Feature/{FeatureName}FeatureTests.swift`
+`{FeatureName}FeatureTests.swift`
 
 ### Test Cases
-1. `test_initialState_isCorrect` - Verifies initial state
-2. `test_onAppear_fetchesData` - Verifies data loading on appear
-3. `test_fetchData_success` - Verifies successful fetch
-4. `test_fetchData_failure` - Verifies error handling
+1. `testInitialState` - Verifies initial state
+2. `testOnAppear_fetchesData` - Verifies data loading on appear
+3. `testFetchData_success` - Verifies successful fetch
+4. `testFetchData_failure` - Verifies error handling
 
 ### Mocks Created
-- `MockItemClient` in `Mocks/MockItemClient.swift`
+- `{ClientName}.mock()` extension
 
 ### TDD Phase
 - [ ] RED: Tests written and failing
@@ -522,7 +454,5 @@ When generating tests, output in this format:
 
 ## References
 
-- `@.claude/skills/tdd-workflow.md` - TDD workflow guide
-- `@.claude/agents/tca-feature-generator.md` - TCA Feature structure
 - [TCA Testing Documentation](https://pointfreeco.github.io/swift-composable-architecture/main/documentation/composablearchitecture/testing)
 - [TestStore API](https://pointfreeco.github.io/swift-composable-architecture/main/documentation/composablearchitecture/teststore)

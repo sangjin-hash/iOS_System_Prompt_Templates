@@ -1,0 +1,35 @@
+// {FeatureName}FeatureTests.swift
+import Testing
+import ComposableArchitecture
+@testable import FirebaseChatting
+
+struct {FeatureName}FeatureTests {
+
+    // MARK: - Initial State Tests
+
+    @Test @MainActor
+    func testInitialState() async {
+        let state = {FeatureName}Feature.State()
+        #expect(state.isLoading == false)
+    }
+
+    // MARK: - {ActionGroup} Tests
+
+    @Test @MainActor
+    func test{ActionName}() async {
+        // Given
+        let store = TestStore(initialState: {FeatureName}Feature.State()) {
+            {FeatureName}Feature()
+        } withDependencies: {
+            // $0.{clientName}.{methodName} = { /* Mock return */ }
+        }
+
+        // When
+        await store.send(.{action}) {
+            // $0.property = expectedValue
+        }
+
+        // Then (Async response)
+        // await store.receive(\.{response}) { $0.property = value }
+    }
+}
