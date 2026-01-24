@@ -1,0 +1,88 @@
+// MARK: - Glass Navigation Bar
+// Template: GlassNavigationBar.swift.template
+// Purpose: Glass-style navigation bar with leading/trailing action support
+
+import SwiftUI
+
+struct GlassNavigationBar<Leading: View, Trailing: View>: View {
+    let title: String
+    let leading: () -> Leading
+    let trailing: () -> Trailing
+
+    init(
+        title: String,
+        @ViewBuilder leading: @escaping () -> Leading = { EmptyView() },
+        @ViewBuilder trailing: @escaping () -> Trailing = { EmptyView() }
+    ) {
+        self.title = title
+        self.leading = leading
+        self.trailing = trailing
+    }
+
+    var body: some View {
+        HStack {
+            leading()
+                .frame(width: 60, alignment: .leading)
+
+            Spacer()
+
+            Text(title)
+                .font(.headline)
+                .fontWeight(.semibold)
+
+            Spacer()
+
+            trailing()
+                .frame(width: 60, alignment: .trailing)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(.ultraThinMaterial)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(.white.opacity(0.1))
+                .frame(height: 0.5)
+        }
+    }
+}
+
+// MARK: - Convenience Initializers
+
+extension GlassNavigationBar where Leading == EmptyView, Trailing == EmptyView {
+    init(title: String) {
+        self.init(title: title, leading: { EmptyView() }, trailing: { EmptyView() })
+    }
+}
+
+extension GlassNavigationBar where Trailing == EmptyView {
+    init(title: String, @ViewBuilder leading: @escaping () -> Leading) {
+        self.init(title: title, leading: leading, trailing: { EmptyView() })
+    }
+}
+
+extension GlassNavigationBar where Leading == EmptyView {
+    init(title: String, @ViewBuilder trailing: @escaping () -> Trailing) {
+        self.init(title: title, leading: { EmptyView() }, trailing: trailing)
+    }
+}
+
+// MARK: - Usage Example
+/*
+GlassNavigationBar(
+    title: "Profile",
+    leading: {
+        Button {
+            dismiss()
+        } label: {
+            Image(systemName: "chevron.left")
+        }
+    },
+    trailing: {
+        Button {
+            edit()
+        } label: {
+            Text("Edit")
+        }
+    }
+)
+*/

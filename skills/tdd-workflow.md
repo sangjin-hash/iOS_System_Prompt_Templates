@@ -1,7 +1,7 @@
 ---
 name: ios-tdd-workflow
 description: iOS Test-Driven Development workflow guide. Provides Red-Green-Refactor cycle, iOS testing considerations, and quality gates. Use when implementing features with TDD methodology.
-keywords: iOS, Swift, TDD, testing, Red-Green-Refactor, XCTest, unit testing
+keywords: iOS, Swift, TDD, testing, Red-Green-Refactor, XCTest, unit testing, TCA, Swift Testing
 ---
 
 # iOS TDD Workflow Skill
@@ -277,6 +277,117 @@ xcrun xccov view --report --only-targets YourApp.app DerivedData/.../Logs/Test/*
 - UI layout code
 - Third-party library internals
 - Auto-generated code
+
+---
+
+## 🧩 TCA Test Coverage Targets
+
+When using The Composable Architecture (TCA), apply these specific coverage targets:
+
+| Component | Target | Notes |
+|-----------|--------|-------|
+| Reducer logic | >= 90% | All action handlers |
+| State mutations | 100% | Every state change must be tested |
+| Effect handling | >= 85% | Success, failure, cancellation |
+| Error cases | >= 80% | All error paths |
+| Edge cases | >= 80% | Boundary conditions |
+| Navigation | >= 90% | Push, pop, deep links |
+| Bindings | >= 80% | Form inputs, settings |
+| Delegate actions | 100% | Parent-child communication |
+
+### TCA Test Selection Guide
+
+| Testing | Use Template |
+|---------|--------------|
+| State changes without effects | `@templates/TCA-Tests/Test-StateChange` |
+| API calls / fetch success | `@templates/TCA-Tests/Test-AsyncSuccess` |
+| Error handling | `@templates/TCA-Tests/Test-AsyncError` |
+| Push/pop navigation | `@templates/TCA-Tests/Test-Navigation` |
+| TextField, Toggle, Picker | `@templates/TCA-Tests/Test-Binding` |
+| Alerts, dialogs, sheets | `@templates/TCA-Tests/Test-Alert` |
+| Timers, debounce, polling | `@templates/TCA-Tests/Test-Timer` |
+| Child delegate actions | `@templates/TCA-Tests/Test-ChildDelegate` |
+
+---
+
+## ⚠️ Common TCA Testing Mistakes
+
+### 1. Not Exhausting All Actions
+```swift
+// ❌ BAD: Missing receive for async action
+await store.send(.fetchItems)
+// Test fails because Effect emits action
+
+// ✅ GOOD: Receive all emitted actions
+await store.send(.fetchItems) { $0.isLoading = true }
+await store.receive(._response(.success([]))) { $0.isLoading = false }
+```
+
+### 2. Wrong State Mutation Order
+```swift
+// ❌ BAD: Mutating wrong property first
+await store.send(.fetchItems) {
+    $0.items = []  // This might not change
+    $0.isLoading = true  // This changes
+}
+
+// ✅ GOOD: Only mutate what actually changes
+await store.send(.fetchItems) {
+    $0.isLoading = true
+}
+```
+
+### 3. Not Using withDependencies
+```swift
+// ❌ BAD: Using live dependencies in tests
+let store = TestStore(initialState: Feature.State()) {
+    Feature()  // Uses live dependencies!
+}
+
+// ✅ GOOD: Override dependencies
+let store = TestStore(initialState: Feature.State()) {
+    Feature()
+} withDependencies: {
+    $0.apiClient = .testValue
+}
+```
+
+### 4. Testing Implementation Instead of Behavior
+```swift
+// ❌ BAD: Testing internal implementation
+func test_internalMethodCalled() { }
+
+// ✅ GOOD: Testing observable behavior
+func test_fetchItems_updatesState() { }
+```
+
+### 5. Not Testing Timer/Debounce with TestClock
+```swift
+// ❌ BAD: Using real clock - flaky tests
+let store = TestStore(initialState: Feature.State()) {
+    Feature()
+}
+
+// ✅ GOOD: Use TestClock for deterministic tests
+let clock = TestClock()
+let store = TestStore(initialState: Feature.State()) {
+    Feature()
+} withDependencies: {
+    $0.continuousClock = clock
+}
+await clock.advance(by: .seconds(1))
+```
+
+### 6. Forgetting to Test Error Paths
+```swift
+// ❌ BAD: Only testing success
+func test_fetch_success() { }
+
+// ✅ GOOD: Test both success and failure
+func test_fetch_success() { }
+func test_fetch_failure_showsError() { }
+func test_fetch_failure_preservesExistingData() { }
+```
 
 ---
 

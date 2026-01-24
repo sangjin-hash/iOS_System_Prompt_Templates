@@ -1,0 +1,111 @@
+// MARK: - Simple State Change Test
+// Template: Test-StateChange.swift.template
+// Purpose: Testing synchronous state mutations
+
+import ComposableArchitecture
+import Testing
+
+@MainActor
+struct {FeatureName}StateChangeTests {
+
+    // MARK: - Initial State Test
+
+    @Test
+    func initialState_hasExpectedDefaults() async {
+        let store = TestStore(initialState: {FeatureName}Feature.State()) {
+            {FeatureName}Feature()
+        }
+
+        // Verify initial state without sending any actions
+        #expect(store.state.isLoading == false)
+        #expect(store.state.items.isEmpty)
+        #expect(store.state.errorMessage == nil)
+    }
+
+    // MARK: - Simple State Mutation
+
+    @Test
+    func setLoading_updatesState() async {
+        let store = TestStore(initialState: {FeatureName}Feature.State()) {
+            {FeatureName}Feature()
+        }
+
+        await store.send(._setLoading(true)) {
+            $0.isLoading = true
+        }
+
+        await store.send(._setLoading(false)) {
+            $0.isLoading = false
+        }
+    }
+
+    // MARK: - Multiple State Changes
+
+    @Test
+    func itemSelected_updatesSelectedItem() async {
+        let item = Item(id: "1", name: "Test Item")
+        let store = TestStore(
+            initialState: {FeatureName}Feature.State(items: [item])
+        ) {
+            {FeatureName}Feature()
+        }
+
+        await store.send(.itemSelected(item)) {
+            $0.selectedItem = item
+        }
+    }
+
+    // MARK: - State Reset
+
+    @Test
+    func reset_clearsAllState() async {
+        let store = TestStore(
+            initialState: {FeatureName}Feature.State(
+                items: [Item(id: "1", name: "Test")],
+                isLoading: true,
+                errorMessage: "Error"
+            )
+        ) {
+            {FeatureName}Feature()
+        }
+
+        await store.send(.reset) {
+            $0.items = []
+            $0.isLoading = false
+            $0.errorMessage = nil
+        }
+    }
+}
+
+// MARK: - Usage Notes
+/*
+## Test Structure
+
+```swift
+@Test
+func actionName_expectedBehavior() async {
+    // 1. Arrange - Create TestStore with initial state
+    let store = TestStore(initialState: Feature.State()) {
+        Feature()
+    }
+
+    // 2. Act & Assert - Send action and verify state changes
+    await store.send(.action) {
+        $0.property = expectedValue
+    }
+}
+```
+
+## Key Points
+
+1. Only assert properties that CHANGE
+2. Use descriptive test names: `action_expectedBehavior`
+3. Initial state tests don't need `store.send`
+4. Multiple `store.send` calls for sequential actions
+
+## Placeholder Replacements
+
+- `{FeatureName}`: Feature name
+- `Item`: Replace with your model type
+- Add/modify test cases as needed
+*/

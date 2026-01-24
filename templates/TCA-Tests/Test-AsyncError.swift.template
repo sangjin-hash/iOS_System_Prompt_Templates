@@ -1,0 +1,204 @@
+// MARK: - Async Effect Error Test
+// Template: Test-AsyncError.swift.template
+// Purpose: Testing error handling in async operations
+
+import ComposableArchitecture
+import Testing
+
+@MainActor
+struct {FeatureName}AsyncErrorTests {
+
+    // MARK: - Test Error
+
+    struct TestError: Error, Equatable, LocalizedError {
+        let message: String
+
+        var errorDescription: String? { message }
+
+        init(_ message: String = "Test error") {
+            self.message = message
+        }
+    }
+
+    // MARK: - Fetch Failure
+
+    @Test
+    func fetchItems_failure_setsErrorMessage() async {
+        let error = TestError("Network error")
+
+        let store = TestStore(initialState: {FeatureName}Feature.State()) {
+            {FeatureName}Feature()
+        } withDependencies: {
+            $0.{clientName}.fetchAll = { throw error }
+        }
+
+        await store.send(.fetchItems) {
+            $0.isLoading = true
+        }
+
+        await store.receive(._itemsResponse(.failure(error))) {
+            $0.isLoading = false
+            $0.errorMessage = error.localizedDescription
+        }
+    }
+
+    // MARK: - Create Failure
+
+    @Test
+    func createItem_failure_preservesExistingItems() async {
+        let existingItems = [Item(id: "1", name: "Existing")]
+        let error = TestError("Create failed")
+
+        let store = TestStore(
+            initialState: {FeatureName}Feature.State(items: existingItems)
+        ) {
+            {FeatureName}Feature()
+        } withDependencies: {
+            $0.{clientName}.create = { _ in throw error }
+        }
+
+        await store.send(.createItem(Item(id: "new", name: "New"))) {
+            $0.isLoading = true
+        }
+
+        await store.receive(._createResponse(.failure(error))) {
+            $0.isLoading = false
+            $0.errorMessage = error.localizedDescription
+            // Items should remain unchanged
+        }
+
+        // Verify items are preserved
+        #expect(store.state.items == existingItems)
+    }
+
+    // MARK: - Delete Failure
+
+    @Test
+    func deleteItem_failure_keepsItemInList() async {
+        let items = [
+            Item(id: "1", name: "Item 1"),
+            Item(id: "2", name: "Item 2")
+        ]
+        let error = TestError("Delete failed")
+
+        let store = TestStore(
+            initialState: {FeatureName}Feature.State(items: items)
+        ) {
+            {FeatureName}Feature()
+        } withDependencies: {
+            $0.{clientName}.delete = { _ in throw error }
+        }
+
+        await store.send(.deleteItem("1")) {
+            $0.isLoading = true
+        }
+
+        await store.receive(._deleteResponse(.failure(error))) {
+            $0.isLoading = false
+            $0.errorMessage = error.localizedDescription
+        }
+
+        // Verify item was not removed
+        #expect(store.state.items.count == 2)
+    }
+
+    // MARK: - Error Dismissal
+
+    @Test
+    func dismissError_clearsErrorMessage() async {
+        let store = TestStore(
+            initialState: {FeatureName}Feature.State(errorMessage: "Previous error")
+        ) {
+            {FeatureName}Feature()
+        }
+
+        await store.send(.dismissError) {
+            $0.errorMessage = nil
+        }
+    }
+
+    // MARK: - Retry After Error
+
+    @Test
+    func retryAfterError_clearsErrorAndRetries() async {
+        let mockItems = [Item(id: "1", name: "Success")]
+
+        let store = TestStore(
+            initialState: {FeatureName}Feature.State(errorMessage: "Previous error")
+        ) {
+            {FeatureName}Feature()
+        } withDependencies: {
+            $0.{clientName}.fetchAll = { mockItems }
+        }
+
+        await store.send(.retry) {
+            $0.errorMessage = nil
+            $0.isLoading = true
+        }
+
+        await store.receive(._itemsResponse(.success(mockItems))) {
+            $0.isLoading = false
+            $0.items = mockItems
+        }
+    }
+
+    // MARK: - Specific Error Types
+
+    @Test
+    func fetchItems_networkError_showsNetworkMessage() async {
+        let store = TestStore(initialState: {FeatureName}Feature.State()) {
+            {FeatureName}Feature()
+        } withDependencies: {
+            $0.{clientName}.fetchAll = { throw URLError(.notConnectedToInternet) }
+        }
+
+        await store.send(.fetchItems) {
+            $0.isLoading = true
+        }
+
+        await store.receive(._itemsResponse(.failure(URLError(.notConnectedToInternet)))) {
+            $0.isLoading = false
+            $0.errorMessage = "The Internet connection appears to be offline."
+        }
+    }
+}
+
+// MARK: - Usage Notes
+/*
+## Error Test Pattern
+
+```swift
+@Test
+func asyncAction_failure() async {
+    let error = TestError("Something went wrong")
+
+    let store = TestStore(initialState: Feature.State()) {
+        Feature()
+    } withDependencies: {
+        $0.client.method = { throw error }
+    }
+
+    await store.send(.action) {
+        $0.isLoading = true
+    }
+
+    await store.receive(.response(.failure(error))) {
+        $0.isLoading = false
+        $0.errorMessage = error.localizedDescription
+    }
+}
+```
+
+## Key Points
+
+1. Create a `TestError` type that conforms to `Error & Equatable`
+2. Test that errors set appropriate error messages
+3. Test that existing data is preserved on failure
+4. Test error dismissal and retry flows
+
+## Placeholder Replacements
+
+- `{FeatureName}`: Feature name
+- `{clientName}`: Dependency client property name
+- `Item`: Replace with your model type
+*/

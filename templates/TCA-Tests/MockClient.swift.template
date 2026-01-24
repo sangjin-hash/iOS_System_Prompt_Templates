@@ -1,0 +1,220 @@
+// MARK: - Dependency Mocking Pattern
+// Template: MockClient.swift.template
+// Purpose: Creating testable mock implementations for dependency clients
+
+import ComposableArchitecture
+import Foundation
+
+// MARK: - Mock Client Extension
+
+extension {ClientName}Client {
+    /// Creates a mock client with customizable behavior for testing
+    static func mock(
+        fetchAll: @escaping @Sendable () async throws -> [Item] = { [] },
+        fetch: @escaping @Sendable (String) async throws -> Item = { _ in .mock },
+        create: @escaping @Sendable (Item) async throws -> Item = { $0 },
+        update: @escaping @Sendable (Item) async throws -> Item = { $0 },
+        delete: @escaping @Sendable (String) async throws -> Void = { _ in }
+    ) -> Self {
+        Self(
+            fetchAll: fetchAll,
+            fetch: fetch,
+            create: create,
+            update: update,
+            delete: delete
+        )
+    }
+
+    /// Mock that returns empty/default values
+    static let empty = Self.mock()
+
+    /// Mock that always throws
+    static func failing(_ error: Error = MockError.notImplemented) -> Self {
+        Self.mock(
+            fetchAll: { throw error },
+            fetch: { _ in throw error },
+            create: { _ in throw error },
+            update: { _ in throw error },
+            delete: { _ in throw error }
+        )
+    }
+}
+
+// MARK: - Mock Error
+
+enum MockError: Error, LocalizedError {
+    case notImplemented
+    case networkError
+    case serverError(code: Int)
+    case notFound
+    case unauthorized
+
+    var errorDescription: String? {
+        switch self {
+        case .notImplemented:
+            return "Not implemented"
+        case .networkError:
+            return "Network error"
+        case .serverError(let code):
+            return "Server error: \(code)"
+        case .notFound:
+            return "Not found"
+        case .unauthorized:
+            return "Unauthorized"
+        }
+    }
+}
+
+// MARK: - Mock Model
+
+extension Item {
+    static let mock = Item(
+        id: "mock-id",
+        name: "Mock Item"
+    )
+
+    static let mockList: [Item] = [
+        Item(id: "1", name: "Item 1"),
+        Item(id: "2", name: "Item 2"),
+        Item(id: "3", name: "Item 3")
+    ]
+
+    static func mock(
+        id: String = "mock-id",
+        name: String = "Mock Item"
+    ) -> Item {
+        Item(id: id, name: name)
+    }
+}
+
+// MARK: - Test Helpers
+
+extension {ClientName}Client {
+    /// Creates a mock that records all calls for verification
+    static func recording(
+        fetchAllCalls: isolated UncheckedSendable<[Void]> = .init([]),
+        fetchCalls: isolated UncheckedSendable<[String]> = .init([]),
+        createCalls: isolated UncheckedSendable<[Item]> = .init([]),
+        deleteCalls: isolated UncheckedSendable<[String]> = .init([])
+    ) -> Self {
+        Self.mock(
+            fetchAll: {
+                fetchAllCalls.value.append(())
+                return []
+            },
+            fetch: { id in
+                fetchCalls.value.append(id)
+                return .mock
+            },
+            create: { item in
+                createCalls.value.append(item)
+                return item
+            },
+            delete: { id in
+                deleteCalls.value.append(id)
+            }
+        )
+    }
+}
+
+// MARK: - Async Delay Helper
+
+extension {ClientName}Client {
+    /// Creates a mock with configurable delays for testing loading states
+    static func withDelay(
+        delay: Duration = .milliseconds(100),
+        clock: any Clock<Duration> = ContinuousClock()
+    ) -> Self {
+        Self.mock(
+            fetchAll: {
+                try await clock.sleep(for: delay)
+                return Item.mockList
+            },
+            fetch: { _ in
+                try await clock.sleep(for: delay)
+                return .mock
+            },
+            create: { item in
+                try await clock.sleep(for: delay)
+                return item
+            },
+            delete: { _ in
+                try await clock.sleep(for: delay)
+            }
+        )
+    }
+}
+
+// MARK: - Usage in Tests
+
+/*
+## Basic Mock Usage
+
+```swift
+let store = TestStore(initialState: Feature.State()) {
+    Feature()
+} withDependencies: {
+    $0.itemClient = .mock(
+        fetchAll: { [Item(id: "1", name: "Test")] }
+    )
+}
+```
+
+## Mock with Specific Error
+
+```swift
+$0.itemClient = .mock(
+    fetchAll: { throw MockError.networkError }
+)
+```
+
+## Failing Mock (All Methods Throw)
+
+```swift
+$0.itemClient = .failing()
+```
+
+## Recording Mock (Verify Calls)
+
+```swift
+let fetchCalls = UncheckedSendable<[String]>([])
+
+let store = TestStore(initialState: Feature.State()) {
+    Feature()
+} withDependencies: {
+    $0.itemClient = .recording(fetchCalls: fetchCalls)
+}
+
+await store.send(.fetchItem("123"))
+#expect(fetchCalls.value == ["123"])
+```
+
+## Mock with Delay
+
+```swift
+let clock = TestClock()
+
+let store = TestStore(initialState: Feature.State()) {
+    Feature()
+} withDependencies: {
+    $0.itemClient = .withDelay(delay: .seconds(1), clock: clock)
+    $0.continuousClock = clock
+}
+
+await store.send(.fetchItems) {
+    $0.isLoading = true
+}
+
+await clock.advance(by: .seconds(1))
+
+await store.receive(._response(.success(Item.mockList))) {
+    $0.isLoading = false
+    $0.items = Item.mockList
+}
+```
+
+## Placeholder Replacements
+
+- `{ClientName}`: Client name (PascalCase, e.g., `ItemClient`)
+- `Item`: Replace with your model type
+*/

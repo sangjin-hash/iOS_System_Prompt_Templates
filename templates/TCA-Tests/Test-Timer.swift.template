@@ -1,0 +1,293 @@
+// MARK: - Timer/Long-Running Effect Test
+// Template: Test-Timer.swift.template
+// Purpose: Testing timers and long-running effects with TestClock
+
+import ComposableArchitecture
+import Testing
+
+@MainActor
+struct {FeatureName}TimerTests {
+
+    // MARK: - Start Timer
+
+    @Test
+    func startTimer_beginsCountdown() async {
+        let clock = TestClock()
+
+        let store = TestStore(initialState: {FeatureName}Feature.State()) {
+            {FeatureName}Feature()
+        } withDependencies: {
+            $0.continuousClock = clock
+        }
+
+        await store.send(.startTimer) {
+            $0.isTimerRunning = true
+        }
+
+        // Advance clock by 1 second
+        await clock.advance(by: .seconds(1))
+        await store.receive(.timerTicked) {
+            $0.secondsElapsed = 1
+        }
+
+        // Advance clock by another second
+        await clock.advance(by: .seconds(1))
+        await store.receive(.timerTicked) {
+            $0.secondsElapsed = 2
+        }
+
+        // Stop timer
+        await store.send(.stopTimer) {
+            $0.isTimerRunning = false
+        }
+    }
+
+    // MARK: - Stop Timer
+
+    @Test
+    func stopTimer_cancelsTimerEffect() async {
+        let clock = TestClock()
+
+        let store = TestStore(
+            initialState: {FeatureName}Feature.State(isTimerRunning: true)
+        ) {
+            {FeatureName}Feature()
+        } withDependencies: {
+            $0.continuousClock = clock
+        }
+
+        await store.send(.stopTimer) {
+            $0.isTimerRunning = false
+        }
+
+        // Advancing clock should not emit any actions
+        await clock.advance(by: .seconds(5))
+        // No store.receive expected - test passes if no actions received
+    }
+
+    // MARK: - Timer Completion
+
+    @Test
+    func timer_completesAfterDuration() async {
+        let clock = TestClock()
+
+        let store = TestStore(
+            initialState: {FeatureName}Feature.State(
+                targetSeconds: 3
+            )
+        ) {
+            {FeatureName}Feature()
+        } withDependencies: {
+            $0.continuousClock = clock
+        }
+
+        await store.send(.startTimer) {
+            $0.isTimerRunning = true
+        }
+
+        await clock.advance(by: .seconds(1))
+        await store.receive(.timerTicked) {
+            $0.secondsElapsed = 1
+        }
+
+        await clock.advance(by: .seconds(1))
+        await store.receive(.timerTicked) {
+            $0.secondsElapsed = 2
+        }
+
+        await clock.advance(by: .seconds(1))
+        await store.receive(.timerTicked) {
+            $0.secondsElapsed = 3
+        }
+
+        await store.receive(.timerCompleted) {
+            $0.isTimerRunning = false
+            $0.isCompleted = true
+        }
+    }
+
+    // MARK: - Reset Timer
+
+    @Test
+    func resetTimer_clearsElapsedTime() async {
+        let store = TestStore(
+            initialState: {FeatureName}Feature.State(
+                secondsElapsed: 10,
+                isTimerRunning: false
+            )
+        ) {
+            {FeatureName}Feature()
+        }
+
+        await store.send(.resetTimer) {
+            $0.secondsElapsed = 0
+            $0.isCompleted = false
+        }
+    }
+
+    // MARK: - Debounced Action
+
+    @Test
+    func searchText_debouncesThenSearches() async {
+        let clock = TestClock()
+        let results = [Item(id: "1", name: "Result")]
+
+        let store = TestStore(initialState: {FeatureName}Feature.State()) {
+            {FeatureName}Feature()
+        } withDependencies: {
+            $0.continuousClock = clock
+            $0.{clientName}.search = { _ in results }
+        }
+
+        // Type quickly
+        await store.send(.searchTextChanged("h")) {
+            $0.searchText = "h"
+        }
+
+        await store.send(.searchTextChanged("he")) {
+            $0.searchText = "he"
+        }
+
+        await store.send(.searchTextChanged("hel")) {
+            $0.searchText = "hel"
+        }
+
+        // Advance past debounce delay (e.g., 300ms)
+        await clock.advance(by: .milliseconds(300))
+
+        // Only one search should be triggered
+        await store.receive(._searchResponse(.success(results))) {
+            $0.searchResults = results
+        }
+    }
+
+    // MARK: - Cancellation on New Input
+
+    @Test
+    func searchText_cancelsInFlightRequest() async {
+        let clock = TestClock()
+
+        let store = TestStore(initialState: {FeatureName}Feature.State()) {
+            {FeatureName}Feature()
+        } withDependencies: {
+            $0.continuousClock = clock
+            $0.{clientName}.search = { query in
+                // Simulate slow network
+                try await clock.sleep(for: .seconds(1))
+                return [Item(id: "1", name: query)]
+            }
+        }
+
+        // Start first search
+        await store.send(.searchTextChanged("first")) {
+            $0.searchText = "first"
+        }
+
+        await clock.advance(by: .milliseconds(300)) // Past debounce
+
+        // Type new query before first completes
+        await store.send(.searchTextChanged("second")) {
+            $0.searchText = "second"
+        }
+
+        await clock.advance(by: .milliseconds(300)) // Past debounce
+
+        // Advance to complete second search
+        await clock.advance(by: .seconds(1))
+
+        // Should only receive second search results
+        await store.receive(._searchResponse(.success([Item(id: "1", name: "second")]))) {
+            $0.searchResults = [Item(id: "1", name: "second")]
+        }
+    }
+
+    // MARK: - Polling
+
+    @Test
+    func startPolling_fetchesAtInterval() async {
+        let clock = TestClock()
+        var fetchCount = 0
+
+        let store = TestStore(initialState: {FeatureName}Feature.State()) {
+            {FeatureName}Feature()
+        } withDependencies: {
+            $0.continuousClock = clock
+            $0.{clientName}.fetchStatus = {
+                fetchCount += 1
+                return Status(value: fetchCount)
+            }
+        }
+
+        await store.send(.startPolling) {
+            $0.isPolling = true
+        }
+
+        // First poll
+        await store.receive(._statusResponse(.success(Status(value: 1)))) {
+            $0.status = Status(value: 1)
+        }
+
+        // Advance to next poll interval
+        await clock.advance(by: .seconds(5))
+        await store.receive(._statusResponse(.success(Status(value: 2)))) {
+            $0.status = Status(value: 2)
+        }
+
+        // Stop polling
+        await store.send(.stopPolling) {
+            $0.isPolling = false
+        }
+    }
+}
+
+// MARK: - Usage Notes
+/*
+## Timer Test Pattern
+
+```swift
+let clock = TestClock()
+
+let store = TestStore(initialState: Feature.State()) {
+    Feature()
+} withDependencies: {
+    $0.continuousClock = clock
+}
+
+await store.send(.startTimer) {
+    $0.isRunning = true
+}
+
+await clock.advance(by: .seconds(1))
+await store.receive(.tick) {
+    $0.elapsed = 1
+}
+```
+
+## Debounce Test Pattern
+
+```swift
+// Send multiple rapid inputs
+await store.send(.input("a")) { ... }
+await store.send(.input("ab")) { ... }
+await store.send(.input("abc")) { ... }
+
+// Advance past debounce delay
+await clock.advance(by: .milliseconds(300))
+
+// Only receive final result
+await store.receive(.result) { ... }
+```
+
+## Key Points
+
+1. Always inject `TestClock` via `withDependencies`
+2. Use `clock.advance(by:)` to control time
+3. Test cancellation with `cancelInFlight: true`
+4. For polling, test multiple intervals
+
+## Placeholder Replacements
+
+- `{FeatureName}`: Feature name
+- `{clientName}`: Dependency client property name
+- `Item`, `Status`: Replace with your model types
+*/

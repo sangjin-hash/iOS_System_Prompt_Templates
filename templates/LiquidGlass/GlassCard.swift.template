@@ -1,0 +1,73 @@
+// MARK: - Glass Card
+// Template: GlassCard.swift.template
+// Purpose: Glass card modifier and view container with gradient border
+
+import SwiftUI
+
+// MARK: - Glass Card Modifier
+
+struct GlassCardModifier: ViewModifier {
+    var padding: CGFloat = 16
+    var cornerRadius: CGFloat = 20
+
+    func body(content: Content) -> some View {
+        content
+            .padding(padding)
+            .glassBackground(cornerRadius: cornerRadius, material: .thinMaterial)
+    }
+}
+
+extension View {
+    func glassCard(padding: CGFloat = 16, cornerRadius: CGFloat = 20) -> some View {
+        modifier(GlassCardModifier(padding: padding, cornerRadius: cornerRadius))
+    }
+}
+
+// MARK: - Glass Card View
+
+struct GlassCardView<Content: View>: View {
+    let content: () -> Content
+
+    init(@ViewBuilder content: @escaping () -> Content) {
+        self.content = content
+    }
+
+    var body: some View {
+        content()
+            .padding(16)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
+            .overlay {
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(
+                        LinearGradient(
+                            colors: [.white.opacity(0.3), .white.opacity(0.1)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            }
+            .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 6)
+    }
+}
+
+// MARK: - Usage Example
+/*
+// Using modifier
+VStack {
+    Text("Title")
+    Text("Subtitle")
+}
+.glassCard()
+
+// Using view
+GlassCardView {
+    VStack(alignment: .leading, spacing: 8) {
+        Text("Title")
+            .font(.headline)
+        Text("Description")
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+    }
+}
+*/

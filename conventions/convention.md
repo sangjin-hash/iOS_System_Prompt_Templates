@@ -229,20 +229,20 @@ NavigationView { }
 ### Naming
 ```swift
 // ✅ Preferred - No redundant suffix
-@Observable class Library { }
+@Observable @MainActor
+class Library { }
 
-// ✅ Acceptable - When needed
-class EventData: ObservableObject { }
+@Observable @MainActor
+class EventData { }
 
-// Instance names
-@StateObject private var library = Library()
-@StateObject private var eventData = EventData()
+// Access via Environment
+@Environment(Library.self) private var library
+@Environment(EventData.self) private var eventData
 ```
 
 ### Observable
-- iOS 17+: Use `@Observable` with `@MainActor`
-- iOS 16-: Use `ObservableObject`
-- Never mix both in same project targeting iOS 17+
+- Use `@Observable` with `@MainActor`
+- Pass via `@Environment` or directly
 
 ---
 
@@ -274,9 +274,8 @@ class EventData: ObservableObject { }
 ### State Management
 - `@State`: View owns the data
 - `@Binding`: View receives reference from parent
-- `@StateObject`: View owns ObservableObject (iOS 16-)
-- `@ObservedObject`: View observes external object (iOS 16-)
-- `@Environment`: View observes @Observable (iOS 17+)
+- `@Environment`: View observes @Observable
+- `@Bindable`: Two-way binding to @Observable
 
 ### View Extraction
 ```swift
@@ -456,7 +455,7 @@ Views that display information (progress views, gauges)
 - **Editor**: View-level editing unit
 
 ### Data Model vs Model Data
-- **Data Model**: Observable class (`@Observable` or `ObservableObject`)
+- **Data Model**: Observable class (`@Observable @MainActor`)
 - **Model Data**: Instance of a data model
 
 ---
@@ -464,6 +463,6 @@ Views that display information (progress views, gauges)
 ## References
 
 - Korean detailed guide: `convention-KR.md`
-- Apple HIG: `HIG/APPLE-HIG-EN.md`
+- Apple HIG: `HIG/APPLE-HIG.md`
 - [Swift API Design Guidelines](https://swift.org/documentation/api-design-guidelines/)
 - [Managing Model Data - Apple](https://developer.apple.com/documentation/swiftui/managing-model-data-in-your-app)

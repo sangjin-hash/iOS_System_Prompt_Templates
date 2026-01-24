@@ -1,0 +1,209 @@
+// MARK: - Binding Test
+// Template: Test-Binding.swift.template
+// Purpose: Testing two-way bindings with BindableAction
+
+import ComposableArchitecture
+import Testing
+
+@MainActor
+struct {FeatureName}BindingTests {
+
+    // MARK: - Text Binding
+
+    @Test
+    func textBinding_updatesText() async {
+        let store = TestStore(initialState: {FeatureName}Feature.State()) {
+            {FeatureName}Feature()
+        }
+
+        await store.send(.binding(.set(\.text, "Hello"))) {
+            $0.text = "Hello"
+        }
+
+        await store.send(.binding(.set(\.text, "Hello World"))) {
+            $0.text = "Hello World"
+        }
+    }
+
+    // MARK: - Toggle Binding
+
+    @Test
+    func toggleBinding_updatesIsEnabled() async {
+        let store = TestStore(initialState: {FeatureName}Feature.State()) {
+            {FeatureName}Feature()
+        }
+
+        await store.send(.binding(.set(\.isEnabled, true))) {
+            $0.isEnabled = true
+        }
+
+        await store.send(.binding(.set(\.isEnabled, false))) {
+            $0.isEnabled = false
+        }
+    }
+
+    // MARK: - Picker Binding
+
+    @Test
+    func pickerBinding_updatesSelectedOption() async {
+        let store = TestStore(initialState: {FeatureName}Feature.State()) {
+            {FeatureName}Feature()
+        }
+
+        await store.send(.binding(.set(\.selectedOption, .option2))) {
+            $0.selectedOption = .option2
+        }
+    }
+
+    // MARK: - Slider Binding
+
+    @Test
+    func sliderBinding_updatesValue() async {
+        let store = TestStore(initialState: {FeatureName}Feature.State()) {
+            {FeatureName}Feature()
+        }
+
+        await store.send(.binding(.set(\.sliderValue, 0.75))) {
+            $0.sliderValue = 0.75
+        }
+    }
+
+    // MARK: - Binding with Side Effect
+
+    @Test
+    func textBinding_triggersValidation() async {
+        let store = TestStore(initialState: {FeatureName}Feature.State()) {
+            {FeatureName}Feature()
+        }
+
+        // Empty text should be invalid
+        await store.send(.binding(.set(\.text, ""))) {
+            $0.text = ""
+            $0.isValid = false
+        }
+
+        // Non-empty text should be valid
+        await store.send(.binding(.set(\.text, "Valid input"))) {
+            $0.text = "Valid input"
+            $0.isValid = true
+        }
+    }
+
+    // MARK: - Binding with Async Side Effect
+
+    @Test
+    func searchTextBinding_triggersSearch() async {
+        let searchResults = [Item(id: "1", name: "Result")]
+
+        let store = TestStore(initialState: {FeatureName}Feature.State()) {
+            {FeatureName}Feature()
+        } withDependencies: {
+            $0.{clientName}.search = { _ in searchResults }
+            $0.continuousClock = ImmediateClock()
+        }
+
+        await store.send(.binding(.set(\.searchText, "query"))) {
+            $0.searchText = "query"
+        }
+
+        // If search is debounced, might need to advance clock
+        await store.receive(._searchResponse(.success(searchResults))) {
+            $0.searchResults = searchResults
+        }
+    }
+
+    // MARK: - Multiple Bindings
+
+    @Test
+    func formBindings_updateMultipleFields() async {
+        let store = TestStore(initialState: {FeatureName}Feature.State()) {
+            {FeatureName}Feature()
+        }
+
+        await store.send(.binding(.set(\.name, "John"))) {
+            $0.name = "John"
+        }
+
+        await store.send(.binding(.set(\.email, "john@example.com"))) {
+            $0.email = "john@example.com"
+        }
+
+        await store.send(.binding(.set(\.agreeToTerms, true))) {
+            $0.agreeToTerms = true
+        }
+
+        // Verify final state
+        #expect(store.state.name == "John")
+        #expect(store.state.email == "john@example.com")
+        #expect(store.state.agreeToTerms == true)
+    }
+
+    // MARK: - Optional Binding
+
+    @Test
+    func optionalBinding_setsAndClears() async {
+        let store = TestStore(initialState: {FeatureName}Feature.State()) {
+            {FeatureName}Feature()
+        }
+
+        // Set optional value
+        await store.send(.binding(.set(\.selectedDate, Date(timeIntervalSince1970: 0)))) {
+            $0.selectedDate = Date(timeIntervalSince1970: 0)
+        }
+
+        // Clear optional value
+        await store.send(.binding(.set(\.selectedDate, nil))) {
+            $0.selectedDate = nil
+        }
+    }
+}
+
+// MARK: - Usage Notes
+/*
+## Binding Test Pattern
+
+```swift
+@Test
+func binding_updatesState() async {
+    let store = TestStore(initialState: Feature.State()) {
+        Feature()
+    }
+
+    await store.send(.binding(.set(\.propertyName, newValue))) {
+        $0.propertyName = newValue
+    }
+}
+```
+
+## Testing Binding Side Effects
+
+If your reducer reacts to binding changes:
+
+```swift
+case .binding(\.text):
+    state.isValid = !state.text.isEmpty
+    return .none
+```
+
+Include the side effect in test:
+
+```swift
+await store.send(.binding(.set(\.text, "value"))) {
+    $0.text = "value"
+    $0.isValid = true  // Side effect
+}
+```
+
+## Key Points
+
+1. Use `.binding(.set(\.keyPath, value))` pattern
+2. Test both setting and clearing values
+3. Test side effects triggered by bindings
+4. For async side effects, mock dependencies and use `store.receive`
+
+## Placeholder Replacements
+
+- `{FeatureName}`: Feature name
+- `{clientName}`: Dependency client property name
+- Add/modify state properties as needed
+*/

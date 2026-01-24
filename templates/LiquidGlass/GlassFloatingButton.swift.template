@@ -1,0 +1,79 @@
+// MARK: - Glass Floating Action Button
+// Template: GlassFloatingButton.swift.template
+// Purpose: Glass-style floating action button with press animation
+
+import SwiftUI
+
+struct GlassFloatingButton: View {
+    let icon: String
+    let action: () -> Void
+
+    @State private var isPressed = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 22, weight: .medium))
+                .foregroundStyle(.primary)
+                .frame(width: 56, height: 56)
+                .background(.thinMaterial, in: Circle())
+                .overlay {
+                    Circle()
+                        .stroke(
+                            LinearGradient(
+                                colors: [.white.opacity(0.4), .white.opacity(0.1)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1
+                        )
+                }
+                .shadow(color: .black.opacity(0.15), radius: 12, x: 0, y: 6)
+                .scaleEffect(isPressed ? 0.92 : 1.0)
+        }
+        .buttonStyle(.plain)
+        .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isPressed = pressing
+            }
+        }, perform: {})
+    }
+}
+
+// MARK: - Glass Floating Button with Badge
+
+struct GlassFloatingButtonWithBadge: View {
+    let icon: String
+    let badgeCount: Int
+    let action: () -> Void
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            GlassFloatingButton(icon: icon, action: action)
+
+            if badgeCount > 0 {
+                Text(badgeCount > 99 ? "99+" : "\(badgeCount)")
+                    .font(.caption2)
+                    .fontWeight(.bold)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, badgeCount > 9 ? 6 : 0)
+                    .frame(minWidth: 18, minHeight: 18)
+                    .background(.red, in: Capsule())
+                    .offset(x: 4, y: -4)
+            }
+        }
+    }
+}
+
+// MARK: - Usage Example
+/*
+// Basic FAB
+GlassFloatingButton(icon: "plus") {
+    addNewItem()
+}
+
+// FAB with badge
+GlassFloatingButtonWithBadge(icon: "bell", badgeCount: 5) {
+    showNotifications()
+}
+*/

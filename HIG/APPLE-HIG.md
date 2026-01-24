@@ -145,7 +145,7 @@
 - **Full Screen Tasks**: Information entry, settings, etc.
 - **Clear Done/Cancel Buttons**: Place at top
 - **Confirm Changes**: Display confirmation message when canceling
-- **Card Style**: Default style in iOS 13 and later
+- **Card Style**: Default modal presentation style
 
 #### 4. Popovers (iPad)
 - **Additional Information or Options**: Maintain context
@@ -156,7 +156,7 @@
 - **No Abuse**: Use only when necessary
 - **Clear Closing Method**: Users should know how to close
 - **Minimize Workflow Interruption**: Handle inline when possible
-- **Close with Swipe**: Support swipe down to close in iOS 13+
+- **Close with Swipe**: Support swipe down to close modals
 
 ---
 
@@ -214,7 +214,7 @@
 #### List Styles
 - **Plain**: Default list style
 - **Grouped**: Lists grouped into sections
-- **Inset Grouped**: Group lists with margins (iOS 13+)
+- **Inset Grouped**: Group lists with margins
 - **Sidebar**: Lists for sidebar on iPad
 
 #### List Items
@@ -265,7 +265,7 @@
 ### Pickers
 
 #### Date Picker
-- **Inline Style**: Default style in iOS 14+
+- **Inline Style**: Default date picker style
 - **Wheels Style**: Drum roll style (legacy)
 - **Compact Style**: Space-saving type
 
@@ -332,7 +332,7 @@
 ### Sheets and Modals
 - **Clear Purpose**: Make it clear why modal appeared
 - **Done/Cancel Buttons**: Place at top
-- **Card Style**: Default style in iOS 13+
+- **Card Style**: Default alert presentation style
 - **Close with Swipe**: Support swipe down
 
 ### Context Menus
@@ -517,7 +517,7 @@
 - **Info.plist Description**: `NSCameraUsageDescription`, `NSMicrophoneUsageDescription`
 
 #### Photo Library
-- **Limited Access**: iOS 14+ Limited Access
+- **Limited Access**: Support Limited Photo Access
 - **Info.plist Description**: `NSPhotoLibraryUsageDescription`
 
 #### Contacts, Calendar, Reminders

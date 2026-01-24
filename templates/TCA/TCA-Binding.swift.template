@@ -1,0 +1,156 @@
+// MARK: - TCA Binding Pattern
+// Template: TCA-Binding.swift.template
+// Purpose: Two-way binding with BindableAction and @Bindable
+
+import ComposableArchitecture
+import SwiftUI
+
+// MARK: - Feature with Bindings
+
+@Reducer
+struct {FeatureName}Feature {
+    @ObservableState
+    struct State: Equatable {
+        var text = ""
+        var isToggled = false
+        var sliderValue: Double = 0.5
+        var selectedOption: Option = .option1
+        var items: [Item] = []
+    }
+
+    enum Option: String, CaseIterable, Equatable {
+        case option1 = "Option 1"
+        case option2 = "Option 2"
+        case option3 = "Option 3"
+    }
+
+    enum Action: BindableAction, Equatable {
+        case binding(BindingAction<State>)
+        // Other actions
+        case submitTapped
+    }
+
+    var body: some ReducerOf<Self> {
+        BindingReducer()
+
+        Reduce { state, action in
+            switch action {
+            case .binding(\.text):
+                // React to text changes (e.g., validation)
+                return .none
+
+            case .binding(\.isToggled):
+                // React to toggle changes
+                if state.isToggled {
+                    // Do something when toggled on
+                }
+                return .none
+
+            case .binding:
+                // Ignore other binding changes
+                return .none
+
+            case .submitTapped:
+                // Handle submit
+                return .none
+            }
+        }
+    }
+}
+
+// MARK: - View with Bindings
+
+struct {FeatureName}View: View {
+    @Bindable var store: StoreOf<{FeatureName}Feature>
+
+    var body: some View {
+        Form {
+            // Text Field
+            Section("Text Input") {
+                TextField("Enter text", text: $store.text)
+            }
+
+            // Toggle
+            Section("Settings") {
+                Toggle("Enable feature", isOn: $store.isToggled)
+            }
+
+            // Slider
+            Section("Slider") {
+                Slider(value: $store.sliderValue, in: 0...1)
+                Text("Value: \(store.sliderValue, specifier: "%.2f")")
+            }
+
+            // Picker
+            Section("Selection") {
+                Picker("Option", selection: $store.selectedOption) {
+                    ForEach({FeatureName}Feature.Option.allCases, id: \.self) { option in
+                        Text(option.rawValue).tag(option)
+                    }
+                }
+            }
+
+            // Submit Button
+            Section {
+                Button("Submit") {
+                    store.send(.submitTapped)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Usage Notes
+/*
+## Binding Patterns
+
+### Basic binding:
+```swift
+TextField("Name", text: $store.name)
+Toggle("Enabled", isOn: $store.isEnabled)
+```
+
+### Reacting to binding changes:
+```swift
+case .binding(\.text):
+    // Validate or transform text
+    state.isValid = !state.text.isEmpty
+    return .none
+```
+
+### Binding with side effects:
+```swift
+case .binding(\.searchText):
+    return .run { [text = state.searchText] send in
+        try await Task.sleep(for: .milliseconds(300))
+        await send(.search(text))
+    }
+    .cancellable(id: CancelID.search, cancelInFlight: true)
+```
+
+### Focus state (for text fields):
+```swift
+// In State
+@ObservableState
+struct State: Equatable {
+    @Presents var focus: Field?
+
+    enum Field: Equatable {
+        case email, password
+    }
+}
+
+// In View
+@FocusState var focus: {FeatureName}Feature.State.Field?
+
+TextField("Email", text: $store.email)
+    .focused($focus, equals: .email)
+    .bind($store.focus, to: $focus)
+```
+
+## Placeholder Replacements
+
+- `{FeatureName}`: Feature name
+- Add/modify state properties as needed
+- Update Option enum for your use case
+*/

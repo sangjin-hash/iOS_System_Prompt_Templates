@@ -1,0 +1,95 @@
+// MARK: - TCA NavigationStack Pattern
+// Template: TCA-NavigationStack.swift.template
+// Purpose: Stack-based navigation with @Reducer enum Path
+
+import ComposableArchitecture
+import SwiftUI
+
+// MARK: - Parent Feature (with NavigationStack)
+
+@Reducer
+struct {ParentFeatureName}Feature {
+    @ObservableState
+    struct State: Equatable {
+        var path = StackState<Path.State>()
+        // Add other state properties here
+    }
+
+    enum Action: Equatable {
+        case path(StackActionOf<Path>)
+        // Add other actions here
+    }
+
+    var body: some ReducerOf<Self> {
+        Reduce { state, action in
+            switch action {
+            case .path:
+                return .none
+            // Handle other actions...
+            }
+        }
+        .forEach(\.path, action: \.path)
+    }
+
+    // MARK: - Navigation Path
+
+    @Reducer
+    enum Path {
+        case detail(DetailFeature)
+        case settings(SettingsFeature)
+        // Add other destinations
+    }
+}
+
+// MARK: - Parent View (with NavigationStack)
+
+struct {ParentFeatureName}View: View {
+    @Bindable var store: StoreOf<{ParentFeatureName}Feature>
+
+    var body: some View {
+        NavigationStack(path: $store.scope(state: \.path, action: \.path)) {
+            // Root content
+            ContentView()
+        } destination: { store in
+            switch store.case {
+            case .detail(let store):
+                DetailView(store: store)
+            case .settings(let store):
+                SettingsView(store: store)
+            // Handle other destinations
+            }
+        }
+    }
+}
+
+// MARK: - Usage Notes
+/*
+## Navigation Actions
+
+To push a new screen:
+```swift
+case .itemTapped(let item):
+    state.path.append(.detail(DetailFeature.State(item: item)))
+    return .none
+```
+
+To pop back:
+```swift
+case .backTapped:
+    _ = state.path.popLast()
+    return .none
+```
+
+To handle child delegate actions:
+```swift
+case .path(.element(id: _, action: .detail(.delegate(.didSave)))):
+    // Handle delegate action
+    return .none
+```
+
+## Placeholder Replacements
+
+- `{ParentFeatureName}`: Your feature name (e.g., `Home`, `Profile`)
+- Add destinations to the `Path` enum as needed
+- Update the `destination` switch in the View
+*/

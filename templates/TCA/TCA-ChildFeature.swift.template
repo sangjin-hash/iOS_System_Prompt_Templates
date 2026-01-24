@@ -1,0 +1,137 @@
+// MARK: - TCA Child Feature Pattern
+// Template: TCA-ChildFeature.swift.template
+// Purpose: Composing child features with Scope and delegate actions
+
+import ComposableArchitecture
+import SwiftUI
+
+// MARK: - Child Feature (with Delegate)
+
+@Reducer
+struct {ChildFeatureName}Feature {
+    @ObservableState
+    struct State: Equatable {
+        // Child state properties
+    }
+
+    enum Action: Equatable {
+        // Public actions (from View)
+        case doneTapped
+        case cancelTapped
+
+        // Delegate actions (to Parent)
+        case delegate(Delegate)
+
+        enum Delegate: Equatable {
+            case didComplete(result: String)
+            case didCancel
+        }
+    }
+
+    var body: some ReducerOf<Self> {
+        Reduce { state, action in
+            switch action {
+            case .doneTapped:
+                return .send(.delegate(.didComplete(result: "Success")))
+
+            case .cancelTapped:
+                return .send(.delegate(.didCancel))
+
+            case .delegate:
+                return .none
+            }
+        }
+    }
+}
+
+// MARK: - Parent Feature (with Child)
+
+@Reducer
+struct {ParentFeatureName}Feature {
+    @ObservableState
+    struct State: Equatable {
+        var child = {ChildFeatureName}Feature.State()
+        var result: String?
+    }
+
+    enum Action: Equatable {
+        case child({ChildFeatureName}Feature.Action)
+    }
+
+    var body: some ReducerOf<Self> {
+        Scope(state: \.child, action: \.child) {
+            {ChildFeatureName}Feature()
+        }
+
+        Reduce { state, action in
+            switch action {
+            case .child(.delegate(.didComplete(let result))):
+                state.result = result
+                return .none
+
+            case .child(.delegate(.didCancel)):
+                // Handle cancel
+                return .none
+
+            case .child:
+                // Ignore other child actions
+                return .none
+            }
+        }
+    }
+}
+
+// MARK: - Parent View (with Child)
+
+struct {ParentFeatureName}View: View {
+    @Bindable var store: StoreOf<{ParentFeatureName}Feature>
+
+    var body: some View {
+        VStack {
+            // Parent content
+
+            {ChildFeatureName}View(
+                store: store.scope(state: \.child, action: \.child)
+            )
+        }
+    }
+}
+
+// MARK: - Usage Notes
+/*
+## Delegate Pattern
+
+Child features communicate with parents via delegate actions:
+
+1. Define delegate cases in child's Action enum
+2. Send delegate actions from child reducer
+3. Handle delegate actions in parent reducer
+4. Ignore non-delegate child actions in parent
+
+## Optional Child (Presented)
+
+For optional child features (sheets, alerts):
+
+```swift
+@ObservableState
+struct State: Equatable {
+    @Presents var child: ChildFeature.State?
+}
+
+enum Action: Equatable {
+    case child(PresentationAction<ChildFeature.Action>)
+}
+
+var body: some ReducerOf<Self> {
+    Reduce { ... }
+    .ifLet(\.$child, action: \.child) {
+        ChildFeature()
+    }
+}
+```
+
+## Placeholder Replacements
+
+- `{ChildFeatureName}`: Child feature name
+- `{ParentFeatureName}`: Parent feature name
+*/

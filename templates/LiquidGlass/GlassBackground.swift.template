@@ -1,0 +1,38 @@
+// MARK: - Glass Background Modifier
+// Template: GlassBackground.swift.template
+// Purpose: Base glass background modifier with blur effect, subtle border, and shadow
+
+import SwiftUI
+
+struct GlassBackground: ViewModifier {
+    var cornerRadius: CGFloat = 16
+    var material: Material = .ultraThinMaterial
+
+    func body(content: Content) -> some View {
+        content
+            .background(material, in: RoundedRectangle(cornerRadius: cornerRadius))
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .stroke(.white.opacity(0.2), lineWidth: 0.5)
+            }
+            .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 5)
+    }
+}
+
+extension View {
+    func glassBackground(
+        cornerRadius: CGFloat = 16,
+        material: Material = .ultraThinMaterial
+    ) -> some View {
+        modifier(GlassBackground(cornerRadius: cornerRadius, material: material))
+    }
+}
+
+// MARK: - Usage Example
+/*
+VStack {
+    Text("Content")
+}
+.padding()
+.glassBackground(cornerRadius: 20, material: .thinMaterial)
+*/

@@ -1,0 +1,201 @@
+// MARK: - Navigation Test
+// Template: Test-Navigation.swift.template
+// Purpose: Testing navigation stack and path management
+
+import ComposableArchitecture
+import Testing
+
+@MainActor
+struct {FeatureName}NavigationTests {
+
+    // MARK: - Push Navigation
+
+    @Test
+    func itemTapped_pushesDetailScreen() async {
+        let item = Item(id: "1", name: "Test Item")
+
+        let store = TestStore(
+            initialState: {FeatureName}Feature.State(items: [item])
+        ) {
+            {FeatureName}Feature()
+        }
+
+        await store.send(.itemTapped(item)) {
+            $0.path.append(.detail(DetailFeature.State(item: item)))
+        }
+    }
+
+    // MARK: - Multiple Push
+
+    @Test
+    func navigateToNestedScreen_buildCorrectPath() async {
+        let store = TestStore(initialState: {FeatureName}Feature.State()) {
+            {FeatureName}Feature()
+        }
+
+        // Push first screen
+        await store.send(.settingsTapped) {
+            $0.path.append(.settings(SettingsFeature.State()))
+        }
+
+        // Push nested screen from settings
+        await store.send(.path(.element(id: 0, action: .settings(.profileTapped)))) {
+            $0.path.append(.profile(ProfileFeature.State()))
+        }
+
+        #expect(store.state.path.count == 2)
+    }
+
+    // MARK: - Pop Navigation
+
+    @Test
+    func backTapped_popsLastScreen() async {
+        let store = TestStore(
+            initialState: {FeatureName}Feature.State(
+                path: StackState([
+                    .detail(DetailFeature.State(item: Item(id: "1", name: "Test")))
+                ])
+            )
+        ) {
+            {FeatureName}Feature()
+        }
+
+        await store.send(.backTapped) {
+            _ = $0.path.popLast()
+        }
+
+        #expect(store.state.path.isEmpty)
+    }
+
+    // MARK: - Pop to Root
+
+    @Test
+    func popToRoot_clearsEntirePath() async {
+        let store = TestStore(
+            initialState: {FeatureName}Feature.State(
+                path: StackState([
+                    .settings(SettingsFeature.State()),
+                    .profile(ProfileFeature.State()),
+                    .detail(DetailFeature.State(item: Item(id: "1", name: "Test")))
+                ])
+            )
+        ) {
+            {FeatureName}Feature()
+        }
+
+        await store.send(.popToRoot) {
+            $0.path.removeAll()
+        }
+
+        #expect(store.state.path.isEmpty)
+    }
+
+    // MARK: - Child Delegate Action
+
+    @Test
+    func detailDidSave_popsAndUpdatesItem() async {
+        let originalItem = Item(id: "1", name: "Original")
+        let updatedItem = Item(id: "1", name: "Updated")
+
+        let store = TestStore(
+            initialState: {FeatureName}Feature.State(
+                items: [originalItem],
+                path: StackState([
+                    .detail(DetailFeature.State(item: originalItem))
+                ])
+            )
+        ) {
+            {FeatureName}Feature()
+        }
+
+        await store.send(.path(.element(id: 0, action: .detail(.delegate(.didSave(updatedItem)))))) {
+            $0.items = [updatedItem]
+            _ = $0.path.popLast()
+        }
+    }
+
+    // MARK: - Deep Link Navigation
+
+    @Test
+    func handleDeepLink_navigatesToCorrectScreen() async {
+        let store = TestStore(initialState: {FeatureName}Feature.State()) {
+            {FeatureName}Feature()
+        }
+
+        await store.send(.handleDeepLink(.detail(id: "123"))) {
+            $0.path.append(.detail(DetailFeature.State(itemId: "123")))
+        }
+    }
+
+    // MARK: - Navigation Path Verification
+
+    @Test
+    func navigationPath_maintainsCorrectOrder() async {
+        let store = TestStore(initialState: {FeatureName}Feature.State()) {
+            {FeatureName}Feature()
+        }
+
+        await store.send(.settingsTapped) {
+            $0.path.append(.settings(SettingsFeature.State()))
+        }
+
+        await store.send(.path(.element(id: 0, action: .settings(.aboutTapped)))) {
+            $0.path.append(.about(AboutFeature.State()))
+        }
+
+        // Verify path order
+        #expect(store.state.path.count == 2)
+
+        if case .settings = store.state.path[id: 0] {
+            // First element is settings - correct
+        } else {
+            Issue.record("Expected first path element to be settings")
+        }
+
+        if case .about = store.state.path[id: 1] {
+            // Second element is about - correct
+        } else {
+            Issue.record("Expected second path element to be about")
+        }
+    }
+}
+
+// MARK: - Usage Notes
+/*
+## Navigation Test Patterns
+
+### Push navigation:
+```swift
+await store.send(.itemTapped(item)) {
+    $0.path.append(.detail(DetailFeature.State(item: item)))
+}
+```
+
+### Pop navigation:
+```swift
+await store.send(.backTapped) {
+    _ = $0.path.popLast()
+}
+```
+
+### Handle child delegate:
+```swift
+await store.send(.path(.element(id: 0, action: .detail(.delegate(.didSave))))) {
+    // Update parent state
+    _ = $0.path.popLast()
+}
+```
+
+## Key Points
+
+1. Initialize path with `StackState([...])` for pre-populated paths
+2. Use `.element(id:action:)` pattern for child actions
+3. Always verify path count and order
+4. Test delegate actions that affect parent state
+
+## Placeholder Replacements
+
+- `{FeatureName}`: Feature name
+- Replace `DetailFeature`, `SettingsFeature`, etc. with actual features
+- `Item`: Replace with your model type
+*/

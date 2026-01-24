@@ -1,0 +1,92 @@
+// MARK: - Glass Button
+// Template: GlassButton.swift.template
+// Purpose: Glass-style buttons with press animation (standard and primary variants)
+
+import SwiftUI
+
+// MARK: - Standard Glass Button
+
+struct GlassButton: View {
+    let title: String
+    let icon: String?
+    let action: () -> Void
+
+    @State private var isPressed = false
+
+    init(_ title: String, icon: String? = nil, action: @escaping () -> Void) {
+        self.title = title
+        self.icon = icon
+        self.action = action
+    }
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                if let icon {
+                    Image(systemName: icon)
+                }
+                Text(title)
+                    .fontWeight(.medium)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(.ultraThinMaterial, in: Capsule())
+            .overlay {
+                Capsule()
+                    .stroke(.white.opacity(0.25), lineWidth: 0.5)
+            }
+            .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+            .scaleEffect(isPressed ? 0.97 : 1.0)
+        }
+        .buttonStyle(.plain)
+        .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isPressed = pressing
+            }
+        }, perform: {})
+    }
+}
+
+// MARK: - Primary Glass Button
+
+struct GlassPrimaryButton: View {
+    let title: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .fontWeight(.semibold)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 14)
+                .background(
+                    LinearGradient(
+                        colors: [.blue, .blue.opacity(0.8)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    in: Capsule()
+                )
+                .overlay {
+                    Capsule()
+                        .stroke(.white.opacity(0.3), lineWidth: 0.5)
+                }
+                .shadow(color: .blue.opacity(0.3), radius: 10, x: 0, y: 5)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Usage Example
+/*
+// Standard button
+GlassButton("Settings", icon: "gear") {
+    // Action
+}
+
+// Primary button
+GlassPrimaryButton("Continue") {
+    // Action
+}
+*/

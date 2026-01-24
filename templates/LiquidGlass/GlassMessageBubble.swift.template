@@ -1,0 +1,92 @@
+// MARK: - Glass Message Bubble
+// Template: GlassMessageBubble.swift.template
+// Purpose: Glass-style message bubble for chat interfaces with custom shape
+
+import SwiftUI
+
+// MARK: - Message Bubble View
+
+struct GlassMessageBubble: View {
+    let message: String
+    let isFromMe: Bool
+    let time: String
+
+    var body: some View {
+        HStack {
+            if isFromMe { Spacer(minLength: 60) }
+
+            VStack(alignment: isFromMe ? .trailing : .leading, spacing: 4) {
+                Text(message)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(
+                        isFromMe
+                            ? AnyShapeStyle(LinearGradient(
+                                colors: [.green, .green.opacity(0.85)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ))
+                            : AnyShapeStyle(.ultraThinMaterial)
+                        ,
+                        in: BubbleShape(isFromMe: isFromMe)
+                    )
+                    .foregroundStyle(isFromMe ? .white : .primary)
+                    .overlay {
+                        BubbleShape(isFromMe: isFromMe)
+                            .stroke(.white.opacity(isFromMe ? 0.2 : 0.15), lineWidth: 0.5)
+                    }
+
+                Text(time)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+
+            if !isFromMe { Spacer(minLength: 60) }
+        }
+    }
+}
+
+// MARK: - Bubble Shape
+
+struct BubbleShape: Shape {
+    let isFromMe: Bool
+
+    func path(in rect: CGRect) -> Path {
+        let radius: CGFloat = 18
+        let tailSize: CGFloat = 6
+
+        var path = Path()
+
+        if isFromMe {
+            path.addRoundedRect(
+                in: CGRect(x: 0, y: 0, width: rect.width - tailSize, height: rect.height),
+                cornerSize: CGSize(width: radius, height: radius)
+            )
+        } else {
+            path.addRoundedRect(
+                in: CGRect(x: tailSize, y: 0, width: rect.width - tailSize, height: rect.height),
+                cornerSize: CGSize(width: radius, height: radius)
+            )
+        }
+
+        return path
+    }
+}
+
+// MARK: - Usage Example
+/*
+VStack(spacing: 12) {
+    GlassMessageBubble(
+        message: "Hello! How are you?",
+        isFromMe: false,
+        time: "10:30 AM"
+    )
+
+    GlassMessageBubble(
+        message: "I'm doing great, thanks!",
+        isFromMe: true,
+        time: "10:31 AM"
+    )
+}
+.padding()
+*/

@@ -1,0 +1,120 @@
+// MARK: - Glass List Row
+// Template: GlassListRow.swift.template
+// Purpose: Glass-style list row with leading/trailing content support
+
+import SwiftUI
+
+struct GlassListRow<Leading: View, Trailing: View>: View {
+    let title: String
+    var subtitle: String? = nil
+    let leading: () -> Leading
+    let trailing: () -> Trailing
+    var action: (() -> Void)? = nil
+
+    init(
+        title: String,
+        subtitle: String? = nil,
+        @ViewBuilder leading: @escaping () -> Leading,
+        @ViewBuilder trailing: @escaping () -> Trailing,
+        action: (() -> Void)? = nil
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+        self.leading = leading
+        self.trailing = trailing
+        self.action = action
+    }
+
+    var body: some View {
+        Button {
+            action?()
+        } label: {
+            HStack(spacing: 12) {
+                leading()
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.body)
+                        .foregroundStyle(.primary)
+
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Spacer()
+
+                trailing()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+            .overlay {
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(.white.opacity(0.15), lineWidth: 0.5)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Convenience Initializers
+
+extension GlassListRow where Leading == EmptyView {
+    init(
+        title: String,
+        subtitle: String? = nil,
+        @ViewBuilder trailing: @escaping () -> Trailing,
+        action: (() -> Void)? = nil
+    ) {
+        self.init(title: title, subtitle: subtitle, leading: { EmptyView() }, trailing: trailing, action: action)
+    }
+}
+
+extension GlassListRow where Trailing == EmptyView {
+    init(
+        title: String,
+        subtitle: String? = nil,
+        @ViewBuilder leading: @escaping () -> Leading,
+        action: (() -> Void)? = nil
+    ) {
+        self.init(title: title, subtitle: subtitle, leading: leading, trailing: { EmptyView() }, action: action)
+    }
+}
+
+extension GlassListRow where Leading == EmptyView, Trailing == EmptyView {
+    init(
+        title: String,
+        subtitle: String? = nil,
+        action: (() -> Void)? = nil
+    ) {
+        self.init(title: title, subtitle: subtitle, leading: { EmptyView() }, trailing: { EmptyView() }, action: action)
+    }
+}
+
+// MARK: - Usage Example
+/*
+// Full row with leading and trailing
+GlassListRow(
+    title: "Settings",
+    subtitle: "Customize your experience",
+    leading: {
+        Image(systemName: "gear")
+            .frame(width: 32, height: 32)
+            .background(.blue.opacity(0.2), in: Circle())
+    },
+    trailing: {
+        Image(systemName: "chevron.right")
+            .foregroundStyle(.secondary)
+    }
+) {
+    navigateToSettings()
+}
+
+// Simple row with title only
+GlassListRow(title: "About") {
+    showAbout()
+}
+*/

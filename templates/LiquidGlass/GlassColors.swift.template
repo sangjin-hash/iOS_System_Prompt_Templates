@@ -1,0 +1,93 @@
+// MARK: - Glass Color System & Animation
+// Template: GlassColors.swift.template
+// Purpose: Semantic colors and animation presets for Liquid Glass design system
+
+import SwiftUI
+
+// MARK: - Semantic Colors
+
+extension Color {
+    // Glass-friendly colors
+    static let glassBackground = Color.primary.opacity(0.05)
+    static let glassBorder = Color.white.opacity(0.2)
+    static let glassShadow = Color.black.opacity(0.1)
+
+    // Accent variations
+    static let glassAccent = Color.accentColor.opacity(0.8)
+    static let glassAccentLight = Color.accentColor.opacity(0.3)
+
+    // Semantic glass colors
+    static let glassSuccess = Color.green.opacity(0.8)
+    static let glassWarning = Color.orange.opacity(0.8)
+    static let glassError = Color.red.opacity(0.8)
+    static let glassInfo = Color.blue.opacity(0.8)
+}
+
+// MARK: - Animation Presets
+
+extension Animation {
+    /// Standard spring animation for glass components
+    static let glassSpring = Animation.spring(response: 0.35, dampingFraction: 0.7)
+
+    /// Smooth ease-in-out for subtle transitions
+    static let glassEase = Animation.easeInOut(duration: 0.25)
+
+    /// Bouncy spring for playful interactions
+    static let glassBounce = Animation.spring(response: 0.4, dampingFraction: 0.6)
+
+    /// Quick animation for press states
+    static let glassPress = Animation.easeInOut(duration: 0.15)
+}
+
+// MARK: - Material Guide
+/*
+| Use Case    | Material             | Notes               |
+|-------------|----------------------|---------------------|
+| Cards       | .ultraThinMaterial   | Most transparent    |
+| Overlays    | .thinMaterial        | Medium transparency |
+| Navigation  | .ultraThinMaterial   | Subtle effect       |
+| Tab Bar     | .ultraThinMaterial   | Consistent with nav |
+| Alerts      | .regularMaterial     | More opaque         |
+| Buttons     | .ultraThinMaterial   | Light touch         |
+*/
+
+// MARK: - Glass Gradient Presets
+
+extension LinearGradient {
+    /// Glass border gradient (top-left to bottom-right)
+    static let glassBorder = LinearGradient(
+        colors: [.white.opacity(0.3), .white.opacity(0.1)],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+
+    /// Glass highlight gradient (top to bottom)
+    static let glassHighlight = LinearGradient(
+        colors: [.white.opacity(0.4), .white.opacity(0.1)],
+        startPoint: .top,
+        endPoint: .bottom
+    )
+
+    /// Glass shadow gradient
+    static let glassShadowGradient = LinearGradient(
+        colors: [.black.opacity(0.0), .black.opacity(0.15)],
+        startPoint: .top,
+        endPoint: .bottom
+    )
+}
+
+// MARK: - Usage Example
+/*
+// Using semantic colors
+Text("Success")
+    .foregroundStyle(Color.glassSuccess)
+
+// Using animations
+withAnimation(.glassSpring) {
+    isExpanded.toggle()
+}
+
+// Using gradient
+RoundedRectangle(cornerRadius: 20)
+    .stroke(LinearGradient.glassBorder, lineWidth: 1)
+*/

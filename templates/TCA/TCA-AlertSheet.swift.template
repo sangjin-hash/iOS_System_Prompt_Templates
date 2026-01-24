@@ -1,0 +1,264 @@
+// MARK: - TCA Alert/Sheet Pattern
+// Template: TCA-AlertSheet.swift.template
+// Purpose: Presenting alerts and confirmation dialogs with @Presents
+
+import ComposableArchitecture
+import SwiftUI
+
+// MARK: - Feature with Alert/Sheet
+
+@Reducer
+struct {FeatureName}Feature {
+    @ObservableState
+    struct State: Equatable {
+        @Presents var alert: AlertState<Action.Alert>?
+        @Presents var confirmationDialog: ConfirmationDialogState<Action.ConfirmationDialog>?
+        @Presents var sheet: SheetFeature.State?
+
+        var items: [Item] = []
+        var itemToDelete: Item?
+    }
+
+    enum Action: Equatable {
+        // User actions
+        case deleteTapped(Item)
+        case showOptions
+        case addTapped
+
+        // Presentation actions
+        case alert(PresentationAction<Alert>)
+        case confirmationDialog(PresentationAction<ConfirmationDialog>)
+        case sheet(PresentationAction<SheetFeature.Action>)
+
+        // Alert button actions
+        enum Alert: Equatable {
+            case confirmDeleteTapped
+            case cancelTapped
+        }
+
+        // Confirmation dialog button actions
+        enum ConfirmationDialog: Equatable {
+            case editTapped
+            case shareTapped
+            case deleteTapped
+            case cancelTapped
+        }
+    }
+
+    @Dependency(\.{clientName}) var {clientName}
+
+    var body: some ReducerOf<Self> {
+        Reduce { state, action in
+            switch action {
+            // MARK: - Show Alert
+            case .deleteTapped(let item):
+                state.itemToDelete = item
+                state.alert = AlertState {
+                    TextState("Delete Item?")
+                } actions: {
+                    ButtonState(role: .destructive, action: .confirmDeleteTapped) {
+                        TextState("Delete")
+                    }
+                    ButtonState(role: .cancel, action: .cancelTapped) {
+                        TextState("Cancel")
+                    }
+                } message: {
+                    TextState("This action cannot be undone.")
+                }
+                return .none
+
+            // MARK: - Alert Actions
+            case .alert(.presented(.confirmDeleteTapped)):
+                guard let item = state.itemToDelete else { return .none }
+                state.items.removeAll { $0.id == item.id }
+                state.itemToDelete = nil
+                return .run { _ in
+                    try await {clientName}.delete(item.id)
+                }
+
+            case .alert(.presented(.cancelTapped)):
+                state.itemToDelete = nil
+                return .none
+
+            case .alert(.dismiss):
+                state.itemToDelete = nil
+                return .none
+
+            // MARK: - Show Confirmation Dialog
+            case .showOptions:
+                state.confirmationDialog = ConfirmationDialogState {
+                    TextState("Options")
+                } actions: {
+                    ButtonState(action: .editTapped) {
+                        TextState("Edit")
+                    }
+                    ButtonState(action: .shareTapped) {
+                        TextState("Share")
+                    }
+                    ButtonState(role: .destructive, action: .deleteTapped) {
+                        TextState("Delete")
+                    }
+                    ButtonState(role: .cancel, action: .cancelTapped) {
+                        TextState("Cancel")
+                    }
+                }
+                return .none
+
+            // MARK: - Confirmation Dialog Actions
+            case .confirmationDialog(.presented(.editTapped)):
+                // Handle edit
+                return .none
+
+            case .confirmationDialog(.presented(.shareTapped)):
+                // Handle share
+                return .none
+
+            case .confirmationDialog(.presented(.deleteTapped)):
+                // Handle delete
+                return .none
+
+            case .confirmationDialog(.presented(.cancelTapped)):
+                return .none
+
+            case .confirmationDialog(.dismiss):
+                return .none
+
+            // MARK: - Sheet
+            case .addTapped:
+                state.sheet = SheetFeature.State()
+                return .none
+
+            case .sheet(.presented(.delegate(.didSave(let item)))):
+                state.items.append(item)
+                return .none
+
+            case .sheet:
+                return .none
+            }
+        }
+        .ifLet(\.$alert, action: \.alert)
+        .ifLet(\.$confirmationDialog, action: \.confirmationDialog)
+        .ifLet(\.$sheet, action: \.sheet) {
+            SheetFeature()
+        }
+    }
+}
+
+// MARK: - View with Alert/Sheet
+
+struct {FeatureName}View: View {
+    @Bindable var store: StoreOf<{FeatureName}Feature>
+
+    var body: some View {
+        List {
+            ForEach(store.items) { item in
+                Text(item.name)
+                    .swipeActions {
+                        Button(role: .destructive) {
+                            store.send(.deleteTapped(item))
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
+            }
+        }
+        .toolbar {
+            Button {
+                store.send(.addTapped)
+            } label: {
+                Image(systemName: "plus")
+            }
+        }
+        .alert($store.scope(state: \.alert, action: \.alert))
+        .confirmationDialog($store.scope(state: \.confirmationDialog, action: \.confirmationDialog))
+        .sheet(item: $store.scope(state: \.sheet, action: \.sheet)) { store in
+            SheetFeatureView(store: store)
+        }
+    }
+}
+
+// MARK: - Sheet Feature (Example)
+
+@Reducer
+struct SheetFeature {
+    @ObservableState
+    struct State: Equatable {
+        var name = ""
+    }
+
+    enum Action: Equatable {
+        case nameChanged(String)
+        case saveTapped
+        case cancelTapped
+        case delegate(Delegate)
+
+        enum Delegate: Equatable {
+            case didSave(Item)
+        }
+    }
+
+    @Dependency(\.dismiss) var dismiss
+
+    var body: some ReducerOf<Self> {
+        Reduce { state, action in
+            switch action {
+            case .nameChanged(let name):
+                state.name = name
+                return .none
+
+            case .saveTapped:
+                let item = Item(id: UUID().uuidString, name: state.name)
+                return .run { send in
+                    await send(.delegate(.didSave(item)))
+                    await dismiss()
+                }
+
+            case .cancelTapped:
+                return .run { _ in await dismiss() }
+
+            case .delegate:
+                return .none
+            }
+        }
+    }
+}
+
+// MARK: - Usage Notes
+/*
+## Alert State
+
+```swift
+state.alert = AlertState {
+    TextState("Title")
+} actions: {
+    ButtonState(role: .destructive, action: .delete) {
+        TextState("Delete")
+    }
+    ButtonState(role: .cancel) {
+        TextState("Cancel")
+    }
+} message: {
+    TextState("Optional message")
+}
+```
+
+## Confirmation Dialog State
+
+```swift
+state.confirmationDialog = ConfirmationDialogState {
+    TextState("Title")
+} actions: {
+    ButtonState(action: .action1) { TextState("Action 1") }
+    ButtonState(action: .action2) { TextState("Action 2") }
+    ButtonState(role: .cancel) { TextState("Cancel") }
+} message: {
+    TextState("Optional message")
+}
+```
+
+## Placeholder Replacements
+
+- `{FeatureName}`: Feature name
+- `{clientName}`: Dependency client name
+- `Item`: Replace with your model type
+*/

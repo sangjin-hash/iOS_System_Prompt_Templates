@@ -1,0 +1,259 @@
+// MARK: - Child Feature Integration Test
+// Template: Test-ChildDelegate.swift.template
+// Purpose: Testing parent-child feature communication via delegate actions
+
+import ComposableArchitecture
+import Testing
+
+@MainActor
+struct {ParentFeatureName}ChildIntegrationTests {
+
+    // MARK: - Child Delegate: Success
+
+    @Test
+    func childDelegateDidComplete_updatesParentState() async {
+        let store = TestStore(
+            initialState: {ParentFeatureName}Feature.State(
+                child: {ChildFeatureName}Feature.State()
+            )
+        ) {
+            {ParentFeatureName}Feature()
+        }
+
+        await store.send(.child(.delegate(.didComplete(result: "Success")))) {
+            $0.result = "Success"
+            $0.isChildComplete = true
+        }
+    }
+
+    // MARK: - Child Delegate: Cancel
+
+    @Test
+    func childDelegateDidCancel_resetsParentState() async {
+        let store = TestStore(
+            initialState: {ParentFeatureName}Feature.State(
+                child: {ChildFeatureName}Feature.State(isEditing: true),
+                isDirty: true
+            )
+        ) {
+            {ParentFeatureName}Feature()
+        }
+
+        await store.send(.child(.delegate(.didCancel))) {
+            $0.isDirty = false
+        }
+    }
+
+    // MARK: - Child Delegate: Data Update
+
+    @Test
+    func childDelegateDidSaveItem_addsToParentList() async {
+        let newItem = Item(id: "new", name: "New Item")
+
+        let store = TestStore(
+            initialState: {ParentFeatureName}Feature.State(
+                items: [Item(id: "1", name: "Existing")],
+                child: {ChildFeatureName}Feature.State()
+            )
+        ) {
+            {ParentFeatureName}Feature()
+        }
+
+        await store.send(.child(.delegate(.didSave(newItem)))) {
+            $0.items.append(newItem)
+        }
+
+        #expect(store.state.items.count == 2)
+    }
+
+    // MARK: - Child Delegate: Navigation
+
+    @Test
+    func childDelegateDidRequestNavigation_navigatesToTarget() async {
+        let store = TestStore(
+            initialState: {ParentFeatureName}Feature.State(
+                child: {ChildFeatureName}Feature.State()
+            )
+        ) {
+            {ParentFeatureName}Feature()
+        }
+
+        await store.send(.child(.delegate(.didRequestNavigation(.settings)))) {
+            $0.path.append(.settings(SettingsFeature.State()))
+        }
+    }
+
+    // MARK: - Parent Ignores Non-Delegate Child Actions
+
+    @Test
+    func childInternalAction_parentIgnores() async {
+        let store = TestStore(
+            initialState: {ParentFeatureName}Feature.State(
+                child: {ChildFeatureName}Feature.State()
+            )
+        ) {
+            {ParentFeatureName}Feature()
+        }
+
+        // Send a non-delegate child action
+        await store.send(.child(.buttonTapped)) {
+            // Child state changes (if any)
+            $0.child.tapped = true
+        }
+
+        // Parent state should remain unchanged (except for child state)
+        #expect(store.state.result == nil)
+        #expect(store.state.isChildComplete == false)
+    }
+
+    // MARK: - Optional Child Feature
+
+    @Test
+    func presentChild_createsChildState() async {
+        let store = TestStore(
+            initialState: {ParentFeatureName}Feature.State()
+        ) {
+            {ParentFeatureName}Feature()
+        }
+
+        await store.send(.addTapped) {
+            $0.optionalChild = {ChildFeatureName}Feature.State()
+        }
+    }
+
+    @Test
+    func optionalChildDelegateDidComplete_dismissesChild() async {
+        let store = TestStore(
+            initialState: {ParentFeatureName}Feature.State(
+                optionalChild: {ChildFeatureName}Feature.State()
+            )
+        ) {
+            {ParentFeatureName}Feature()
+        }
+
+        await store.send(.optionalChild(.presented(.delegate(.didComplete(result: "Done"))))) {
+            $0.result = "Done"
+            $0.optionalChild = nil
+        }
+    }
+
+    // MARK: - Multiple Children
+
+    @Test
+    func multipleChildrenDelegate_updatesCorrectState() async {
+        let store = TestStore(
+            initialState: {ParentFeatureName}Feature.State(
+                headerChild: HeaderFeature.State(),
+                contentChild: ContentFeature.State(),
+                footerChild: FooterFeature.State()
+            )
+        ) {
+            {ParentFeatureName}Feature()
+        }
+
+        await store.send(.headerChild(.delegate(.didUpdateTitle("New Title")))) {
+            $0.title = "New Title"
+        }
+
+        await store.send(.contentChild(.delegate(.didSelectItem(Item(id: "1", name: "Selected"))))) {
+            $0.selectedItem = Item(id: "1", name: "Selected")
+        }
+
+        await store.send(.footerChild(.delegate(.didTapAction))) {
+            $0.footerActionTriggered = true
+        }
+    }
+
+    // MARK: - Child Delegate with Side Effect
+
+    @Test
+    func childDelegateDidSave_triggersParentEffect() async {
+        let newItem = Item(id: "new", name: "New")
+
+        let store = TestStore(
+            initialState: {ParentFeatureName}Feature.State(
+                child: {ChildFeatureName}Feature.State()
+            )
+        ) {
+            {ParentFeatureName}Feature()
+        } withDependencies: {
+            $0.{clientName}.create = { $0 }
+        }
+
+        await store.send(.child(.delegate(.didSave(newItem)))) {
+            $0.isLoading = true
+        }
+
+        await store.receive(._saveResponse(.success(newItem))) {
+            $0.isLoading = false
+            $0.items.append(newItem)
+        }
+    }
+
+    // MARK: - ForEach Child Integration
+
+    @Test
+    func forEachChildDelegate_updatesCorrectRow() async {
+        let items = [
+            Item(id: "1", name: "First"),
+            Item(id: "2", name: "Second")
+        ]
+
+        let store = TestStore(
+            initialState: {ParentFeatureName}Feature.State(
+                rows: IdentifiedArray(uniqueElements: items.map { RowFeature.State(item: $0) })
+            )
+        ) {
+            {ParentFeatureName}Feature()
+        }
+
+        // Send action for second row
+        await store.send(.rows(.element(id: "2", action: .delegate(.didToggle)))) {
+            $0.rows[id: "2"]?.isToggled = true
+        }
+
+        // First row should be unchanged
+        #expect(store.state.rows[id: "1"]?.isToggled == false)
+    }
+}
+
+// MARK: - Usage Notes
+/*
+## Delegate Action Pattern
+
+### Scope child:
+```swift
+case .child(.delegate(.didComplete(let result))):
+    state.result = result
+    return .none
+```
+
+### Optional child (ifLet):
+```swift
+case .optionalChild(.presented(.delegate(.didComplete))):
+    state.optionalChild = nil
+    return .none
+```
+
+### ForEach child:
+```swift
+case .rows(.element(id: let id, action: .delegate(.didToggle))):
+    state.rows[id: id]?.isToggled = true
+    return .none
+```
+
+## Key Points
+
+1. Parent should only handle `.delegate` actions
+2. Non-delegate child actions pass through to child reducer
+3. Test that parent state updates correctly
+4. Test that child state is dismissed when appropriate
+5. Test side effects triggered by delegate actions
+
+## Placeholder Replacements
+
+- `{ParentFeatureName}`: Parent feature name
+- `{ChildFeatureName}`: Child feature name
+- `{clientName}`: Dependency client property name
+- `Item`: Replace with your model type
+*/

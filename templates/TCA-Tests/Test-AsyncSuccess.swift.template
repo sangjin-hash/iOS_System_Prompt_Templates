@@ -1,0 +1,174 @@
+// MARK: - Async Effect Success Test
+// Template: Test-AsyncSuccess.swift.template
+// Purpose: Testing successful async operations
+
+import ComposableArchitecture
+import Testing
+
+@MainActor
+struct {FeatureName}AsyncSuccessTests {
+
+    // MARK: - Fetch Success
+
+    @Test
+    func fetchItems_success_updatesState() async {
+        let mockItems = [
+            Item(id: "1", name: "Item 1"),
+            Item(id: "2", name: "Item 2")
+        ]
+
+        let store = TestStore(initialState: {FeatureName}Feature.State()) {
+            {FeatureName}Feature()
+        } withDependencies: {
+            $0.{clientName}.fetchAll = { mockItems }
+        }
+
+        await store.send(.fetchItems) {
+            $0.isLoading = true
+        }
+
+        await store.receive(._itemsResponse(.success(mockItems))) {
+            $0.isLoading = false
+            $0.items = mockItems
+        }
+    }
+
+    // MARK: - Fetch Single Item
+
+    @Test
+    func fetchItem_success_updatesSelectedItem() async {
+        let mockItem = Item(id: "1", name: "Test Item")
+
+        let store = TestStore(initialState: {FeatureName}Feature.State()) {
+            {FeatureName}Feature()
+        } withDependencies: {
+            $0.{clientName}.fetch = { _ in mockItem }
+        }
+
+        await store.send(.fetchItem("1")) {
+            $0.isLoading = true
+        }
+
+        await store.receive(._itemResponse(.success(mockItem))) {
+            $0.isLoading = false
+            $0.selectedItem = mockItem
+        }
+    }
+
+    // MARK: - Create Success
+
+    @Test
+    func createItem_success_addsToList() async {
+        let newItem = Item(id: "new", name: "New Item")
+        let existingItems = [Item(id: "1", name: "Existing")]
+
+        let store = TestStore(
+            initialState: {FeatureName}Feature.State(items: existingItems)
+        ) {
+            {FeatureName}Feature()
+        } withDependencies: {
+            $0.{clientName}.create = { $0 }
+        }
+
+        await store.send(.createItem(newItem)) {
+            $0.isLoading = true
+        }
+
+        await store.receive(._createResponse(.success(newItem))) {
+            $0.isLoading = false
+            $0.items = existingItems + [newItem]
+        }
+    }
+
+    // MARK: - Delete Success
+
+    @Test
+    func deleteItem_success_removesFromList() async {
+        let items = [
+            Item(id: "1", name: "Item 1"),
+            Item(id: "2", name: "Item 2")
+        ]
+
+        let store = TestStore(
+            initialState: {FeatureName}Feature.State(items: items)
+        ) {
+            {FeatureName}Feature()
+        } withDependencies: {
+            $0.{clientName}.delete = { _ in }
+        }
+
+        await store.send(.deleteItem("1")) {
+            $0.isLoading = true
+        }
+
+        await store.receive(._deleteResponse(.success("1"))) {
+            $0.isLoading = false
+            $0.items = [Item(id: "2", name: "Item 2")]
+        }
+    }
+
+    // MARK: - Refresh
+
+    @Test
+    func refresh_clearsErrorAndFetches() async {
+        let mockItems = [Item(id: "1", name: "Fresh")]
+
+        let store = TestStore(
+            initialState: {FeatureName}Feature.State(errorMessage: "Previous error")
+        ) {
+            {FeatureName}Feature()
+        } withDependencies: {
+            $0.{clientName}.fetchAll = { mockItems }
+        }
+
+        await store.send(.refresh) {
+            $0.isLoading = true
+            $0.errorMessage = nil
+        }
+
+        await store.receive(._itemsResponse(.success(mockItems))) {
+            $0.isLoading = false
+            $0.items = mockItems
+        }
+    }
+}
+
+// MARK: - Usage Notes
+/*
+## Async Test Pattern
+
+```swift
+@Test
+func asyncAction_success() async {
+    let store = TestStore(initialState: Feature.State()) {
+        Feature()
+    } withDependencies: {
+        $0.client.method = { expectedResult }
+    }
+
+    // 1. Send action - verify immediate state change
+    await store.send(.action) {
+        $0.isLoading = true
+    }
+
+    // 2. Receive response - verify final state
+    await store.receive(.response(.success(result))) {
+        $0.isLoading = false
+        $0.data = result
+    }
+}
+```
+
+## Key Points
+
+1. Always mock dependencies with `withDependencies`
+2. `store.send` for user-initiated actions
+3. `store.receive` for effect-generated actions
+4. Verify loading state transitions
+
+## Placeholder Replacements
+
+- `{FeatureName}`: Feature name
+- `{clientName}`: Dependency client property name
+- `Item`: Replace with your model type
+*/

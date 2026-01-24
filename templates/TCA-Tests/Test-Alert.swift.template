@@ -1,0 +1,272 @@
+// MARK: - Alert/Sheet Presentation Test
+// Template: Test-Alert.swift.template
+// Purpose: Testing alert, confirmation dialog, and sheet presentations
+
+import ComposableArchitecture
+import Testing
+
+@MainActor
+struct {FeatureName}AlertTests {
+
+    // MARK: - Show Alert
+
+    @Test
+    func deleteTapped_showsDeleteAlert() async {
+        let item = Item(id: "1", name: "Test")
+
+        let store = TestStore(
+            initialState: {FeatureName}Feature.State(items: [item])
+        ) {
+            {FeatureName}Feature()
+        }
+
+        await store.send(.deleteTapped(item)) {
+            $0.itemToDelete = item
+            $0.alert = AlertState {
+                TextState("Delete Item?")
+            } actions: {
+                ButtonState(role: .destructive, action: .confirmDeleteTapped) {
+                    TextState("Delete")
+                }
+                ButtonState(role: .cancel, action: .cancelTapped) {
+                    TextState("Cancel")
+                }
+            } message: {
+                TextState("This action cannot be undone.")
+            }
+        }
+    }
+
+    // MARK: - Confirm Alert Action
+
+    @Test
+    func alertConfirmDelete_deletesItem() async {
+        let item = Item(id: "1", name: "Test")
+
+        let store = TestStore(
+            initialState: {FeatureName}Feature.State(
+                items: [item],
+                itemToDelete: item,
+                alert: AlertState {
+                    TextState("Delete?")
+                } actions: {
+                    ButtonState(role: .destructive, action: .confirmDeleteTapped) {
+                        TextState("Delete")
+                    }
+                }
+            )
+        ) {
+            {FeatureName}Feature()
+        } withDependencies: {
+            $0.{clientName}.delete = { _ in }
+        }
+
+        await store.send(.alert(.presented(.confirmDeleteTapped))) {
+            $0.alert = nil
+            $0.items = []
+            $0.itemToDelete = nil
+        }
+    }
+
+    // MARK: - Cancel Alert
+
+    @Test
+    func alertCancel_dismissesAlert() async {
+        let item = Item(id: "1", name: "Test")
+
+        let store = TestStore(
+            initialState: {FeatureName}Feature.State(
+                items: [item],
+                itemToDelete: item,
+                alert: AlertState {
+                    TextState("Delete?")
+                } actions: {
+                    ButtonState(role: .cancel, action: .cancelTapped) {
+                        TextState("Cancel")
+                    }
+                }
+            )
+        ) {
+            {FeatureName}Feature()
+        }
+
+        await store.send(.alert(.presented(.cancelTapped))) {
+            $0.alert = nil
+            $0.itemToDelete = nil
+        }
+
+        // Verify item was not deleted
+        #expect(store.state.items.count == 1)
+    }
+
+    // MARK: - Alert Dismiss
+
+    @Test
+    func alertDismiss_clearsState() async {
+        let store = TestStore(
+            initialState: {FeatureName}Feature.State(
+                itemToDelete: Item(id: "1", name: "Test"),
+                alert: AlertState { TextState("Alert") }
+            )
+        ) {
+            {FeatureName}Feature()
+        }
+
+        await store.send(.alert(.dismiss)) {
+            $0.alert = nil
+            $0.itemToDelete = nil
+        }
+    }
+
+    // MARK: - Confirmation Dialog
+
+    @Test
+    func showOptions_presentsConfirmationDialog() async {
+        let store = TestStore(initialState: {FeatureName}Feature.State()) {
+            {FeatureName}Feature()
+        }
+
+        await store.send(.showOptions) {
+            $0.confirmationDialog = ConfirmationDialogState {
+                TextState("Options")
+            } actions: {
+                ButtonState(action: .editTapped) {
+                    TextState("Edit")
+                }
+                ButtonState(action: .shareTapped) {
+                    TextState("Share")
+                }
+                ButtonState(role: .destructive, action: .deleteTapped) {
+                    TextState("Delete")
+                }
+                ButtonState(role: .cancel, action: .cancelTapped) {
+                    TextState("Cancel")
+                }
+            }
+        }
+    }
+
+    // MARK: - Confirmation Dialog Action
+
+    @Test
+    func confirmationDialogEdit_navigatesToEdit() async {
+        let store = TestStore(
+            initialState: {FeatureName}Feature.State(
+                confirmationDialog: ConfirmationDialogState {
+                    TextState("Options")
+                } actions: {
+                    ButtonState(action: .editTapped) { TextState("Edit") }
+                }
+            )
+        ) {
+            {FeatureName}Feature()
+        }
+
+        await store.send(.confirmationDialog(.presented(.editTapped))) {
+            $0.confirmationDialog = nil
+            $0.path.append(.edit(EditFeature.State()))
+        }
+    }
+
+    // MARK: - Sheet Presentation
+
+    @Test
+    func addTapped_presentsSheet() async {
+        let store = TestStore(initialState: {FeatureName}Feature.State()) {
+            {FeatureName}Feature()
+        }
+
+        await store.send(.addTapped) {
+            $0.sheet = AddItemFeature.State()
+        }
+    }
+
+    // MARK: - Sheet Delegate Action
+
+    @Test
+    func sheetDidSave_addsItemAndDismisses() async {
+        let newItem = Item(id: "new", name: "New Item")
+
+        let store = TestStore(
+            initialState: {FeatureName}Feature.State(
+                sheet: AddItemFeature.State(name: "New Item")
+            )
+        ) {
+            {FeatureName}Feature()
+        }
+
+        await store.send(.sheet(.presented(.delegate(.didSave(newItem))))) {
+            $0.items.append(newItem)
+            $0.sheet = nil
+        }
+    }
+
+    // MARK: - Sheet Dismiss
+
+    @Test
+    func sheetDismiss_clearsSheet() async {
+        let store = TestStore(
+            initialState: {FeatureName}Feature.State(
+                sheet: AddItemFeature.State()
+            )
+        ) {
+            {FeatureName}Feature()
+        }
+
+        await store.send(.sheet(.dismiss)) {
+            $0.sheet = nil
+        }
+    }
+}
+
+// MARK: - Usage Notes
+/*
+## Alert Test Pattern
+
+```swift
+// Test showing alert
+await store.send(.triggerAction) {
+    $0.alert = AlertState { ... }
+}
+
+// Test alert action
+await store.send(.alert(.presented(.buttonAction))) {
+    $0.alert = nil
+    // Other state changes
+}
+
+// Test alert dismiss
+await store.send(.alert(.dismiss)) {
+    $0.alert = nil
+}
+```
+
+## Sheet Test Pattern
+
+```swift
+// Test showing sheet
+await store.send(.addTapped) {
+    $0.sheet = ChildFeature.State()
+}
+
+// Test delegate action
+await store.send(.sheet(.presented(.delegate(.didComplete)))) {
+    $0.sheet = nil
+    // Other state changes
+}
+```
+
+## Key Points
+
+1. Test both showing and dismissing presentations
+2. Test all button actions in alerts/dialogs
+3. For sheets, test delegate actions from child
+4. Initialize state with presentation for dismiss tests
+
+## Placeholder Replacements
+
+- `{FeatureName}`: Feature name
+- `{clientName}`: Dependency client property name
+- `Item`: Replace with your model type
+- Replace child feature names as needed
+*/
