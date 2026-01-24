@@ -16,9 +16,11 @@ struct {ClientName}: Sendable {
 }
 
 // MARK: - Dependency Key
+// Note: nonisolated(unsafe) is required for Swift 6+ to prevent "uninitialized" closure parameter issues
+// Reference: https://github.com/pointfreeco/swift-dependencies/discussions/404
 
 extension {ClientName}: DependencyKey {
-    static let liveValue = {ClientName}(
+    nonisolated static let liveValue = {ClientName}(
         // methodName: { /* Live implementation */ }
     )
 }

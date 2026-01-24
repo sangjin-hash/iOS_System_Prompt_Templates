@@ -1,0 +1,169 @@
+// MARK: - TCA Async Effect Pattern
+// Template: TCA-AsyncEffect.swift.template
+// Purpose: Handling async operations with .run effects
+
+import ComposableArchitecture
+import SwiftUI
+
+// MARK: - Feature with Async Effects
+
+@Reducer
+struct {FeatureName}Feature {
+    @ObservableState
+    struct State: Equatable {
+        var items: [Item] = []
+        var isLoading = false
+        var errorMessage: String?
+    }
+
+    enum Action: Equatable {
+        // User actions
+        case onAppear
+        case refreshTapped
+        case itemTapped(Item)
+
+        // Internal response actions (prefix with underscore)
+        case _itemsResponse(Result<[Item], Error>)
+        case _itemResponse(Result<Item, Error>)
+
+        // Equatable conformance for Error
+        static func == (lhs: Action, rhs: Action) -> Bool {
+            switch (lhs, rhs) {
+            case (.onAppear, .onAppear),
+                 (.refreshTapped, .refreshTapped):
+                return true
+            case (.itemTapped(let lhs), .itemTapped(let rhs)):
+                return lhs == rhs
+            case (._itemsResponse(.success(let lhs)), ._itemsResponse(.success(let rhs))):
+                return lhs == rhs
+            case (._itemsResponse(.failure), ._itemsResponse(.failure)):
+                return true
+            case (._itemResponse(.success(let lhs)), ._itemResponse(.success(let rhs))):
+                return lhs == rhs
+            case (._itemResponse(.failure), ._itemResponse(.failure)):
+                return true
+            default:
+                return false
+            }
+        }
+    }
+
+    @Dependency(\.{clientName}) var {clientName}
+
+    var body: some ReducerOf<Self> {
+        Reduce { state, action in
+            switch action {
+            case .onAppear:
+                guard state.items.isEmpty else { return .none }
+                return fetchItems(state: &state)
+
+            case .refreshTapped:
+                return fetchItems(state: &state)
+
+            case .itemTapped(let item):
+                // Handle item tap
+                return .none
+
+            case ._itemsResponse(.success(let items)):
+                state.isLoading = false
+                state.items = items
+                state.errorMessage = nil
+                return .none
+
+            case ._itemsResponse(.failure(let error)):
+                state.isLoading = false
+                state.errorMessage = error.localizedDescription
+                return .none
+
+            case ._itemResponse:
+                return .none
+            }
+        }
+    }
+
+    // MARK: - Private Helpers
+
+    private func fetchItems(state: inout State) -> Effect<Action> {
+        state.isLoading = true
+        state.errorMessage = nil
+
+        return .run { send in
+            do {
+                let items = try await {clientName}.fetchAll()
+                await send(._itemsResponse(.success(items)))
+            } catch {
+                await send(._itemsResponse(.failure(error)))
+            }
+        }
+    }
+}
+
+// MARK: - Dependency Client
+
+@DependencyClient
+struct {ClientName}Client {
+    var fetchAll: @Sendable () async throws -> [Item]
+    var fetch: @Sendable (String) async throws -> Item
+    var create: @Sendable (Item) async throws -> Item
+    var delete: @Sendable (String) async throws -> Void
+}
+
+// Note: nonisolated(unsafe) is required for Swift 6+ to prevent "uninitialized" closure parameter issues
+// Reference: https://github.com/pointfreeco/swift-dependencies/discussions/404
+
+extension {ClientName}Client: DependencyKey {
+    nonisolated static let liveValue = Self(
+        fetchAll: { /* Live implementation */ [] },
+        fetch: { _ in /* Live implementation */ fatalError() },
+        create: { $0 },
+        delete: { _ in }
+    )
+
+    nonisolated static let testValue = Self()
+}
+
+extension DependencyValues {
+    var {clientName}: {ClientName}Client {
+        get { self[{ClientName}Client.self] }
+        set { self[{ClientName}Client.self] = newValue }
+    }
+}
+
+// MARK: - Usage Notes
+/*
+## Effect Patterns
+
+### Basic async fetch:
+```swift
+return .run { send in
+    let result = try await client.fetch()
+    await send(.response(.success(result)))
+} catch: { error, send in
+    await send(.response(.failure(error)))
+}
+```
+
+### Cancellable effect:
+```swift
+enum CancelID { case fetch }
+
+return .run { send in
+    let result = try await client.fetch()
+    await send(.response(.success(result)))
+}
+.cancellable(id: CancelID.fetch, cancelInFlight: true)
+```
+
+### Cancel effect:
+```swift
+case .cancelTapped:
+    return .cancel(id: CancelID.fetch)
+```
+
+## Placeholder Replacements
+
+- `{FeatureName}`: Feature name
+- `{ClientName}`: Dependency client name (PascalCase)
+- `{clientName}`: Dependency property name (camelCase)
+- `Item`: Replace with your model type
+*/
